@@ -125,7 +125,7 @@ static PyObject *
 TclInterp_get_var(TclInterpObj *self, PyObject *args)
 {
 	char *varname;
-	PyObject *name;
+	PyObject *name, *result = NULL;
 	Tcl_Obj *tclvar;
 
 	if (!PyArg_ParseTuple(args, "s:get_var", &varname))
@@ -135,8 +135,15 @@ TclInterp_get_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	return TclObj_ToPy(self,
+	result = TclObj_ToPy(self,
 			Tcl_ObjGetVar2(self->interp, tclvar, NULL, PLUMAGE_VAR_FLAGS));
+
+	if (result == NULL && !PyErr_Occurred()) {
+		/* error occurred in the tcl interpreter */
+		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	}
+
+	return result;
 }
 
 
@@ -144,7 +151,7 @@ static PyObject *
 TclInterp_set_var(TclInterpObj *self, PyObject *args)
 {
 	char *varname;
-	PyObject *name, *varval;
+	PyObject *name, *varval, *result;
 	Tcl_Obj *tclvar;
 
 	if (!PyArg_ParseTuple(args, "sO:set_var", &varname, &varval))
@@ -154,9 +161,16 @@ TclInterp_set_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	return TclObj_ToPy(self,
+	result = TclObj_ToPy(self,
 			Tcl_ObjSetVar2(self->interp, tclvar, NULL, PyObj_ToTcl(varval),
 				PLUMAGE_VAR_FLAGS));
+
+	if (result == NULL && !PyErr_Occurred()) {
+		/* error occurred in the tcl interpreter */
+		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	}
+
+	return result;
 }
 
 
