@@ -1,0 +1,30 @@
+#ifndef _PLUMAGE_H
+#define _PLUMAGE_H
+
+#include "Python.h"
+#include <tcl.h>
+#include <tk.h>
+
+typedef struct {
+    PyObject_HEAD
+    /* type specific fields follow */
+    Tcl_Interp *interp;
+
+    Tcl_ThreadId tcl_thread_id;
+    long py_thread_id;
+
+    int running;
+    int tk_loaded;
+    int _error_in_cb; /* 1 when error occurs in a callback, 2 when bgerror */
+
+    PyObject *bgerr_handler;
+    PyObject *commands;
+    /* Tcl types */
+    Tcl_ObjType *IntType;
+    Tcl_ObjType *ListType;
+    Tcl_ObjType *DictType;
+    Tcl_ObjType *DoubleType;
+    Tcl_ObjType *ByteArrayType;
+} TclInterpObj;
+
+#endif
