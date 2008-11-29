@@ -121,6 +121,11 @@ TclInterp_loadtk(TclInterpObj *self)
 
 #define PLUMAGE_VAR_FLAGS TCL_GLOBAL_ONLY | TCL_LEAVE_ERR_MSG
 
+#define CheckResult														\
+	if (result == NULL && !PyErr_Occurred())							\
+		/* error occurred in the Tcl interpreter */						\
+		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp))
+
 static PyObject *
 TclInterp_get_var(TclInterpObj *self, PyObject *args)
 {
@@ -138,11 +143,7 @@ TclInterp_get_var(TclInterpObj *self, PyObject *args)
 	result = TclObj_ToPy(self,
 			Tcl_ObjGetVar2(self->interp, tclvar, NULL, PLUMAGE_VAR_FLAGS));
 
-	if (result == NULL && !PyErr_Occurred()) {
-		/* error occurred in the tcl interpreter */
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
-	}
-
+	CheckResult;
 	return result;
 }
 
@@ -165,11 +166,7 @@ TclInterp_set_var(TclInterpObj *self, PyObject *args)
 			Tcl_ObjSetVar2(self->interp, tclvar, NULL, PyObj_ToTcl(varval),
 				PLUMAGE_VAR_FLAGS));
 
-	if (result == NULL && !PyErr_Occurred()) {
-		/* error occurred in the tcl interpreter */
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
-	}
-
+	CheckResult;
 	return result;
 }
 
@@ -209,11 +206,7 @@ TclInterp_get_arrayvar(TclInterpObj *self, PyObject *args)
 			Tcl_ObjGetVar2(self->interp, tclvar, PyObj_ToTcl(element),
 				PLUMAGE_VAR_FLAGS));
 
-	if (result == NULL && !PyErr_Occurred()) {
-		/* error occurred in the tcl interpreter */
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
-	}
-
+	CheckResult;
 	return result;
 }
 
@@ -237,11 +230,7 @@ TclInterp_set_arrayvar(TclInterpObj *self, PyObject *args)
 			Tcl_ObjSetVar2(self->interp, tclvar, PyObj_ToTcl(element),
 				PyObj_ToTcl(varval), PLUMAGE_VAR_FLAGS));
 
-	if (result == NULL && !PyErr_Occurred()) {
-		/* error occurred in the tcl interpreter */
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
-	}
-
+	CheckResult;
 	return result;
 }
 
