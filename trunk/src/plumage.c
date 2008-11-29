@@ -259,18 +259,20 @@ _eval(TclInterpObj *self, PyObject *args)
 	char *evalstr;
 	PyObject *result = NULL;
 
-	if (!PyArg_ParseTuple(args, "s|i:eval", &evalstr, &flags))
+	if (!PyArg_ParseTuple(args, "s|i:eval", &evalstr, &flags)) {
+		Py_DECREF(args);
 		return NULL;
+	}
 
 	if (flags == -1)
 		flags = TCL_EVAL_DIRECT;
-
 
 	if (Tcl_EvalEx(self->interp, evalstr, -1, flags) != TCL_OK)
 		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 	else
 		result = TclObj_ToPy(self, Tcl_GetObjResult(self->interp));
 
+	Py_DECREF(args);
 	return result;
 }
 
