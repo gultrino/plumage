@@ -622,7 +622,7 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	self->py_thread_id = PyThread_get_thread_ident();
 	if (Tcl_GetVar2(self->interp,
-				"tcl_platform",	"threaded",	TCL_GLOBAL_ONLY)) {
+				"tcl_platform", "threaded", TCL_GLOBAL_ONLY)) {
 		self->tcl_thread_id = Tcl_GetCurrentThread();
 	}
 
