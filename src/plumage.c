@@ -300,7 +300,7 @@ _call(TclInterpObj *self, PyObject *args)
 	RetryIfNeeded(args, _Event_call);
 
 	Tcl_Obj **objv;
-	PyObject *retval = NULL;
+	PyObject *tmp, *retval = NULL;
 	Py_ssize_t i, objc = PyTuple_Size(args);
 
 	if (objc == 0) {
@@ -315,7 +315,12 @@ _call(TclInterpObj *self, PyObject *args)
 	 * args when a None is found (I haven't yet decided what to do about
 	 * this). */
 	for (i = 0; i < objc; i++) {
-		objv[i] = PyObj_ToTcl(PyTuple_GetItem(args, i));
+		tmp = PyTuple_GetItem(args, i);
+		if (tmp == Py_None) {
+			objc = i;
+			break;
+		}
+		objv[i] = PyObj_ToTcl(tmp);
 		if (objv[i] == NULL)
 			goto tcl_dealloc;
 
@@ -574,6 +579,65 @@ TclInterp_quit(TclInterpObj *self)
 	Py_RETURN_NONE;
 }
 
+
+static PyObject *
+TclInterp_getboolean(TclInterpObj *self, PyObject *args)
+{
+	PyObject *result = NULL;
+	PyObject *tclbool;
+	int boolval;
+	const char *s_tclbool;
+
+	if (!PyArg_ParseTuple(args, "O:getboolean", &tclbool))
+		return NULL;
+
+	if (PyInt_Check(tclbool)) {
+		Py_INCREF(tclbool);
+		return tclbool;
+	} else if (PyString_Check(tclbool))
+		s_tclbool = PyString_AsString(tclbool);
+	else {
+		PyErr_SetString(PyExc_TypeError, "tclbool must be either string or "
+				"int");
+		return NULL;
+	}
+
+	if (Tcl_GetBoolean(self->interp, s_tclbool, &boolval) != TCL_OK)
+		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	else {
+		result = boolval ? Py_True : Py_False;
+		Py_INCREF(result);
+	}
+
+	return result;
+}
+
+
+static PyObject *
+TclInterp_splitlist(TclInterpObj *self, PyObject *args)
+{
+	PyObject *result = NULL;
+	char *tcllist;
+	const char **elements;
+	int listsize, i;
+
+	//if (!PyArg_ParseTuple(args, "et:splitlist", &tcllist))
+	if (!PyArg_ParseTuple(args, "s:splitlist", &tcllist))
+		return NULL;
+
+	if (Tcl_SplitList(self->interp, tcllist, &listsize, &elements) != TCL_OK)
+		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	else {
+        result = PyTuple_New(listsize);
+        for (i = 0; i < listsize; i++)
+            PyTuple_SET_ITEM(result, i, PyString_FromString(elements[i]));
+
+		ckfree((char *)elements);
+	}
+
+	return result;
+}
+
 static PyMethodDef TclInterp_methods[] = {
 	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, NULL},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
@@ -591,6 +655,10 @@ static PyMethodDef TclInterp_methods[] = {
 		NULL},
 	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, NULL},
 	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, NULL},
+
+	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS, NULL},
+	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS, NULL},
+
 	{NULL}
 };
 
