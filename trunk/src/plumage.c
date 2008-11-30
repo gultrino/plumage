@@ -311,12 +311,12 @@ _call(TclInterpObj *self, PyObject *args)
 
 	objv = (Tcl_Obj **)ckalloc(objc * sizeof(Tcl_Obj *));
 
-	/* XXX Not checking for Py_None in args. Current _tkinter stops processing
-	 * args when a None is found (I haven't yet decided what to do about
-	 * this). */
 	for (i = 0; i < objc; i++) {
 		tmp = PyTuple_GetItem(args, i);
 		if (tmp == Py_None) {
+			/* the argument list stops being processed when a None is found,
+			 * this is useful when you are calling a tcl command which may
+			 * accept different amount of arguments */
 			objc = i;
 			break;
 		}
