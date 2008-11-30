@@ -31,6 +31,12 @@
 #include "pythread.h"
 #include "structmember.h"
 
+/* XXX I didn't test plumage with anything else besides some tcl/tk 8.4 and
+ * some tcl/tk 8.5, but tcl/tk prior to 8.0 will surely not work */
+#if TCL_MAJOR_VERSION < 8
+#error "Tcl older than 8.0 is not supported"
+#endif
+
 static PyObject *TclError = NULL;
 static PyObject *TkError = NULL;
 
