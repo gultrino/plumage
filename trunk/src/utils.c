@@ -127,10 +127,6 @@ exception:
  *
  * If NULL is returned something wrong happened and the caller must verify
  * if this occurred in Python or in Tcl. */
-#define WARN_NO_TYPE_SUPPORT(obj)										\
-	PyString_AsString(PyString_FromFormat(								\
-				"'%s' object not supported yet, converting to string",	\
-				obj->ob_type->tp_name))
 Tcl_Obj *
 PyObj_ToTcl(PyObject *obj)
 {
@@ -245,8 +241,6 @@ PyObj_ToTcl(PyObject *obj)
 		tclobj = Tcl_NewStringObj("", -1);
 
 	else {
-		/* XXX leaving the warning here for now */
-		PyErr_Warn(PyExc_RuntimeWarning, WARN_NO_TYPE_SUPPORT(obj));
 		PyObject *temp = PyObject_Str(obj);
 		tclobj = Tcl_NewStringObj(PyString_AsString(temp), -1);
 		Py_DECREF(temp);
