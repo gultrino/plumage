@@ -122,9 +122,6 @@ TclInterp_loadtk(TclInterpObj *self)
 }
 
 
-/* XXX The following *_*var functions could be checking for more NULLs
- * but I got tired and didn't do it. */
-
 #define PLUMAGE_VAR_FLAGS TCL_GLOBAL_ONLY | TCL_LEAVE_ERR_MSG
 
 #define CheckResult														\
@@ -146,8 +143,9 @@ TclInterp_get_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	result = TclObj_ToPy(self,
-			Tcl_ObjGetVar2(self->interp, tclvar, NULL, PLUMAGE_VAR_FLAGS));
+	if (tclvar)
+		result = TclObj_ToPy(self,
+				Tcl_ObjGetVar2(self->interp, tclvar, NULL, PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
 	return result;
@@ -158,7 +156,7 @@ static PyObject *
 TclInterp_set_var(TclInterpObj *self, PyObject *args)
 {
 	char *varname;
-	PyObject *name, *varval, *result;
+	PyObject *name, *varval, *result = NULL;
 	Tcl_Obj *tclvar;
 
 	if (!PyArg_ParseTuple(args, "sO:set_var", &varname, &varval))
@@ -168,9 +166,10 @@ TclInterp_set_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	result = TclObj_ToPy(self,
-			Tcl_ObjSetVar2(self->interp, tclvar, NULL, PyObj_ToTcl(varval),
-				PLUMAGE_VAR_FLAGS));
+	if (tclvar)
+		result = TclObj_ToPy(self,
+				Tcl_ObjSetVar2(self->interp, tclvar, NULL, PyObj_ToTcl(varval),
+					PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
 	return result;
@@ -198,7 +197,7 @@ static PyObject *
 TclInterp_get_arrayvar(TclInterpObj *self, PyObject *args)
 {
 	char *varname;
-	PyObject *name, *element, *result;
+	PyObject *name, *element, *result = NULL;
 	Tcl_Obj *tclvar;
 
 	if (!PyArg_ParseTuple(args, "sO:get_arrayvar", &varname, &element))
@@ -208,9 +207,10 @@ TclInterp_get_arrayvar(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	result = TclObj_ToPy(self,
-			Tcl_ObjGetVar2(self->interp, tclvar, PyObj_ToTcl(element),
-				PLUMAGE_VAR_FLAGS));
+	if (tclvar)
+		result = TclObj_ToPy(self,
+				Tcl_ObjGetVar2(self->interp, tclvar, PyObj_ToTcl(element),
+					PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
 	return result;
@@ -221,7 +221,7 @@ static PyObject *
 TclInterp_set_arrayvar(TclInterpObj *self, PyObject *args)
 {
 	char *varname;
-	PyObject *name, *element, *varval, *result;
+	PyObject *name, *element, *varval, *result = NULL;
 	Tcl_Obj *tclvar;
 
 	if (!PyArg_ParseTuple(args, "sOO:set_arrayvar",
@@ -232,9 +232,10 @@ TclInterp_set_arrayvar(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
-	result = TclObj_ToPy(self,
-			Tcl_ObjSetVar2(self->interp, tclvar, PyObj_ToTcl(element),
-				PyObj_ToTcl(varval), PLUMAGE_VAR_FLAGS));
+	if (tclvar)
+		result = TclObj_ToPy(self,
+				Tcl_ObjSetVar2(self->interp, tclvar, PyObj_ToTcl(element),
+					PyObj_ToTcl(varval), PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
 	return result;
