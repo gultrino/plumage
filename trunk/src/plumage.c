@@ -698,6 +698,84 @@ static PyMethodDef TclInterp_methods[] = {
 };
 
 
+static PyObject *
+TclInterp_geterrcheck(TclInterpObj *self, void *closure)
+{
+	return PyInt_FromLong(self->err_check_interval);
+}
+
+int
+TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
+{
+	long checkval;
+
+	if (value == NULL) {
+		PyErr_SetString(PyExc_TypeError,
+				"Cannot delete err_check_interval attribute");
+		return -1;
+	}
+
+	if (!PyInt_Check(value)) {
+		PyErr_SetString(PyExc_TypeError,
+				"The err_check_interval attribute value must be an int");
+		return -1;
+	}
+
+	checkval = PyInt_AsLong(value);
+	if (checkval < 0) {
+		PyErr_SetString(PyExc_TypeError,
+				"The err_check_interval attribute value must not be negative");
+		return -1;
+	}
+
+	self->err_check_interval = checkval;
+	return 0;
+}
+
+static PyObject *
+TclInterp_getthreaded(TclInterpObj *self, void *closure)
+{
+	return PyBool_FromLong(self->tcl_thread_id != NULL);
+}
+
+static PyObject *
+TclInterp_gettkloaded(TclInterpObj *self, void *closure)
+{
+	return PyBool_FromLong(self->tk_loaded);
+}
+
+static PyObject *
+TclInterp_getthreadid(TclInterpObj *self, void *closure)
+{
+	if (self->tcl_thread_id == NULL)
+		Py_RETURN_NONE;
+	else {
+		/* XXX how incorrect is this ? */
+		return Py_BuildValue("l", self->tcl_thread_id);
+	}
+}
+
+static PyGetSetDef TclInterp_getset[] = {
+	{"errcheck_interval",
+		(getter)TclInterp_geterrcheck, (setter)TclInterp_seterrcheck,
+		"Error check interval",
+		NULL},
+	{"threaded",
+		(getter)TclInterp_getthreaded, NULL,
+		"Return True if Tcl has thread support, False otherwise",
+		NULL},
+	{"tk_loaded",
+		(getter)TclInterp_gettkloaded, NULL,
+		"Return True if Tk has been loaded, False otherwise",
+		NULL},
+	{"thread_id",
+		(getter)TclInterp_getthreadid, NULL,
+		"Return the Tcl thread id",
+		NULL},
+	{NULL}
+};
+
+
 void _get_tcltypeobjs(TclInterpObj *self)
 {
 	self->IntType = Tcl_GetObjType("int");
@@ -800,31 +878,6 @@ TclInterp_dealloc(TclInterpObj *self)
 }
 
 
-static PyObject *
-TclInterp_getattr(TclInterpObj *self, char *attr)
-{
-	PyObject *retval;
-
-	if (!strcmp(attr, "threaded")) {
-		retval = PyBool_FromLong(self->tcl_thread_id != NULL);
-	} else if (!strcmp(attr, "thread_id")) {
-		/* XXX this wasn't updated for py_thread_id */
-		if (self->tcl_thread_id == NULL) {
-			Py_INCREF(Py_None);
-			retval = Py_None;
-		} else {
-			/* XXX how incorrect is this ? very probably */
-			retval = Py_BuildValue("l", self->tcl_thread_id);
-		}
-	} else if (!strcmp(attr, "tk_loaded")) {
-		retval = PyBool_FromLong(self->tk_loaded);
-	} else
-		retval = Py_FindMethod(TclInterp_methods, (PyObject *)self, attr);
-
-	return retval;
-}
-
-
 static PyTypeObject TclInterpType = {
 	PyObject_HEAD_INIT(NULL)
 	0,										/* ob_size */
@@ -833,7 +886,7 @@ static PyTypeObject TclInterpType = {
 	0,										/* tp_itemsize */
 	(destructor)TclInterp_dealloc,		    /* tp_dealloc */
 	0,										/* tp_print */
-	(getattrfunc)TclInterp_getattr,			/* tp_getattr */
+	0,										/* tp_getattr */
 	0,										/* tp_setattr */
 	0,										/* tp_compare */
 	0,										/* tp_repr */
@@ -856,7 +909,7 @@ static PyTypeObject TclInterpType = {
 	0,										/* tp_iternext */
 	TclInterp_methods,						/* tp_methods */
 	0,										/* tp_members */
-	0,										/* tp_getset */
+	TclInterp_getset,						/* tp_getset */
 	0,										/* tp_base */
 	0,										/* tp_dict */
 	0,										/* tp_descr_get */
