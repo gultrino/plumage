@@ -589,30 +589,28 @@ TclInterp_quit(TclInterpObj *self)
 static PyObject *
 TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 {
-	PyObject *result = NULL;
-	PyObject *tclbool;
-	int boolval;
-	const char *s_tclbool;
+	int boolval, notcheck;
+	PyObject *tclbool, *result = NULL;
 
 	if (!PyArg_ParseTuple(args, "O:getboolean", &tclbool))
 		return NULL;
 
-	if (PyInt_Check(tclbool)) {
-		Py_INCREF(tclbool);
-		return tclbool;
-	} else if (PyString_Check(tclbool))
-		s_tclbool = PyString_AsString(tclbool);
-	else {
-		PyErr_SetString(PyExc_TypeError, "tclbool must be either string or "
-				"int");
-		return NULL;
+	notcheck = PyObject_IsTrue(tclbool);
+	if (notcheck == 1) {
+		/* tclbool is considered as True by Python, but maybe this contains
+		 * a 'no' string that will be considered as False in Tcl (and that
+		 * is what we are checking here). */
+		PyObject *o = PyObject_Str(tclbool);
+		if (Tcl_GetBoolean(self->interp, PyString_AsString(o),
+					&boolval) != TCL_OK)
+			PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+		else
+			result = PyBool_FromLong(boolval);
+		Py_DECREF(o);
 	}
-
-	if (Tcl_GetBoolean(self->interp, s_tclbool, &boolval) != TCL_OK)
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 	else {
-		result = boolval ? Py_True : Py_False;
-		Py_INCREF(result);
+		result = Py_False;
+		Py_INCREF(Py_False);
 	}
 
 	return result;
