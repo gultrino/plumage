@@ -346,8 +346,8 @@ _call(TclInterpObj *self, PyObject *args)
 	}
 
 	if (Tcl_EvalObjv(self->interp, objc, objv, TCL_EVAL_GLOBAL) != TCL_OK) {
-		if (self->_error_in_cb) {
-			self->_error_in_cb = 0;
+		if (self->err_in_cb) {
+			self->err_in_cb = 0;
 			/* let NULL be returned, error should be set already */
 		}
 		else
@@ -387,7 +387,7 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 	const char *error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
 	PyGILState_STATE gstate = PyGILState_Ensure();
 
-	self->_error_in_cb = 2;
+	self->err_in_cb = 2;
 	if (PyErr_Occurred() != NULL) {
 		/* error already set by Python */
 		goto end;
@@ -464,7 +464,7 @@ TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
 	return TCL_OK;
 
 error:
-	cdata->pytcl->_error_in_cb = 1;
+	cdata->pytcl->err_in_cb = 1;
 	Py_DECREF(func_args);
 	PyGILState_Release(gstate);
 	return TCL_ERROR;
@@ -552,6 +552,22 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 }
 
 
+void
+_check_signal(ClientData clientdata)
+{
+	TclInterpObj *self = clientdata;
+	PyGILState_STATE gstate = PyGILState_Ensure();
+
+	if (PyErr_CheckSignals() || self->err_in_cb == 2) {
+		/* stop the mainloop */
+		self->running = 0;
+	}
+	else
+		Tcl_CreateTimerHandler(self->err_check_interval, _check_signal, self);
+
+	PyGILState_Release(gstate);
+}
+
 /* XXX I wish I could just go and change the function below to not use this
  * polling at all. Still need to understand tcl Notifier in order to
  * implement my own or manage to use it in my favor here. */
@@ -561,27 +577,18 @@ TclInterp_mainloop(TclInterpObj *self)
 #define mainloop_go_on \
 	(self->tk_loaded ? self->running && Tk_GetNumMainWindows() : self->running)
 
-	int loop_result = 0;
+	Tcl_CreateTimerHandler(self->err_check_interval, _check_signal, self);
 	self->running = 1;
 
 	/* XXX XXX */
 	while (mainloop_go_on) {
 		Py_BEGIN_ALLOW_THREADS
-		loop_result = Tcl_DoOneEvent(TCL_DONT_WAIT);
+		Tcl_DoOneEvent(TCL_ALL_EVENTS);
 		Py_END_ALLOW_THREADS
-
-		if (PyErr_CheckSignals() || self->_error_in_cb == 2)
-			break;
-
-		if (loop_result == 0) {
-			Py_BEGIN_ALLOW_THREADS
-			Tcl_Sleep(20);
-			Py_END_ALLOW_THREADS
-		}
 	}
 
 	self->running = 0;
-	self->_error_in_cb = 0;
+	self->err_in_cb = 0;
 
 	if (PyErr_Occurred())
 		return NULL;
@@ -729,7 +736,8 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		return NULL;
 	self->running = 0;
 	self->tk_loaded = 0;
-	self->_error_in_cb = 0;
+	self->err_in_cb = 0;
+	self->err_check_interval = 50;
 
 	_get_tcltypeobjs(self);
 
