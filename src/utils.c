@@ -30,6 +30,11 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		else {
 			/* Convert UTF-8 to Unicode string */
 			pyobj = PyUnicode_DecodeUTF8(objstr, length, "strict");
+			if (pyobj == NULL) {
+				/* Received some invalid UTF-8 */
+				PyErr_Clear();
+				pyobj = PyString_FromStringAndSize(objstr, length);
+			}
 		}
 #else
 		pyobj = PyString_FromStringAndSize(objstr, length);
