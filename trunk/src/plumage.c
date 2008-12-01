@@ -589,14 +589,14 @@ TclInterp_quit(TclInterpObj *self)
 static PyObject *
 TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 {
-	int boolval, notcheck;
+	int boolval, pytrue;
 	PyObject *tclbool, *result = NULL;
 
 	if (!PyArg_ParseTuple(args, "O:getboolean", &tclbool))
 		return NULL;
 
-	notcheck = PyObject_IsTrue(tclbool);
-	if (notcheck == 1) {
+	pytrue = PyObject_IsTrue(tclbool);
+	if (pytrue == 1) {
 		/* tclbool is considered as True by Python, but maybe this contains
 		 * a 'no' string that will be considered as False in Tcl (and that
 		 * is what we are checking here). */
