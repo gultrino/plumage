@@ -1,5 +1,5 @@
-#ifndef _PLUMAGE_H
-#define _PLUMAGE_H
+#ifndef PLUMAGE_H
+#define PLUMAGE_H
 
 #include "Python.h"
 #include <tcl.h>
