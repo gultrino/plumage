@@ -382,7 +382,7 @@ finish:
 
 int
 TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
-		const char *argv[])
+		CONST char *argv[])
 {
 	TclInterpObj *self = clientdata;
 	const char *error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
@@ -422,7 +422,7 @@ struct TclPyBridge {
 
 int
 TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
-		Tcl_Obj *const objv[])
+		Tcl_Obj *CONST objv[])
 {
 	struct TclPyBridge *cdata = clientdata;
 	Py_ssize_t extra_args_size = PyTuple_Size(cdata->cb_args);
