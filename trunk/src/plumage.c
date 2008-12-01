@@ -41,10 +41,10 @@ static PyObject *TclError = NULL;
 static PyObject *TkError = NULL;
 
 
-static PyObject *_call(TclInterpObj *, PyObject *);
-static PyObject *_eval(TclInterpObj *, PyObject *);
-static PyObject *_loadtk(TclInterpObj *, PyObject *);
-static PyObject *_schedule_call(TclInterpObj *, PyObject *,
+static PyObject *TclPyBridge_call(TclInterpObj *, PyObject *);
+static PyObject *TclPyBridge_eval(TclInterpObj *, PyObject *);
+static PyObject *TclPyBridge_loadtk(TclInterpObj *, PyObject *);
+static PyObject *TclPyEvent_schedule_call(TclInterpObj *, PyObject *,
 		int(*)(Tcl_Event *, int));
 
 struct QueuedEvent {
@@ -63,23 +63,23 @@ struct QueuedEvent {
 		return 1;	/* remove event */									\
 	}
 
-#define ScheduleIfNeeded(func, args, to_sched)			\
-	if (self->tcl_thread_id == Tcl_GetCurrentThread())	\
-		return func(self, args);						\
-	else												\
-		return _schedule_call(self, args, to_sched)
+#define ScheduleIfNeeded(func, args, to_sched)					\
+	if (self->tcl_thread_id == Tcl_GetCurrentThread())			\
+		return func(self, args);								\
+	else														\
+		return TclPyEvent_schedule_call(self, args, to_sched)
 
-#define RetryIfNeeded(args, function)						\
-	if (PyThread_get_thread_ident() != self->py_thread_id)	\
-		return _schedule_call(self, args, function)
+#define RetryIfNeeded(args, function)							\
+	if (PyThread_get_thread_ident() != self->py_thread_id)		\
+		return TclPyEvent_schedule_call(self, args, function)
 
-CreateEventProc(_Event_call, _call)
-CreateEventProc(_Event_eval, _eval)
-CreateEventProc(_Event_loadtk, _loadtk)
+CreateEventProc(TclPyEvent_call, TclPyBridge_call)
+CreateEventProc(TclPyEvent_eval, TclPyBridge_eval)
+CreateEventProc(TclPyEvent_loadtk, TclPyBridge_loadtk)
 
 
 static PyObject *
-_schedule_call(TclInterpObj *self, PyObject *args,
+TclPyEvent_schedule_call(TclInterpObj *self, PyObject *args,
 		int(*eventproc)(Tcl_Event *, int))
 {
 	struct QueuedEvent *queue_evt;
@@ -103,7 +103,7 @@ static PyObject *
 TclInterp_call(TclInterpObj *self, PyObject *args)
 {
 	Py_INCREF(args);
-	ScheduleIfNeeded(_call, args, _Event_call);
+	ScheduleIfNeeded(TclPyBridge_call, args, TclPyEvent_call);
 }
 
 
@@ -111,14 +111,14 @@ static PyObject *
 TclInterp_eval(TclInterpObj *self, PyObject *args)
 {
 	Py_INCREF(args);
-	ScheduleIfNeeded(_eval, args, _Event_eval);
+	ScheduleIfNeeded(TclPyBridge_eval, args, TclPyEvent_eval);
 }
 
 
 static PyObject *
 TclInterp_loadtk(TclInterpObj *self)
 {
-	ScheduleIfNeeded(_loadtk, NULL, _Event_loadtk);
+	ScheduleIfNeeded(TclPyBridge_loadtk, NULL, TclPyEvent_loadtk);
 }
 
 
@@ -261,9 +261,9 @@ TclInterp_unset_arrayvar(TclInterpObj *self, PyObject *args)
 
 
 static PyObject *
-_eval(TclInterpObj *self, PyObject *args)
+TclPyBridge_eval(TclInterpObj *self, PyObject *args)
 {
-	RetryIfNeeded(NULL, _Event_call);
+	RetryIfNeeded(NULL, TclPyEvent_eval);
 
 	int flags = -1;
 	char *evalstr;
@@ -288,9 +288,9 @@ _eval(TclInterpObj *self, PyObject *args)
 
 
 static PyObject *
-_loadtk(TclInterpObj *self, PyObject *discard)
+TclPyBridge_loadtk(TclInterpObj *self, PyObject *discard)
 {
-	RetryIfNeeded(NULL, _Event_loadtk);
+	RetryIfNeeded(NULL, TclPyEvent_loadtk);
 
 	if (!self->tk_loaded && (Tk_Init(self->interp) == TCL_ERROR)) {
 		PyErr_SetString(TkError, Tcl_GetStringResult(self->interp));
@@ -302,9 +302,9 @@ _loadtk(TclInterpObj *self, PyObject *discard)
 }
 
 static PyObject *
-_call(TclInterpObj *self, PyObject *args)
+TclPyBridge_call(TclInterpObj *self, PyObject *args)
 {
-	RetryIfNeeded(args, _Event_call);
+	RetryIfNeeded(args, TclPyEvent_call);
 
 	Tcl_Obj **objv;
 	PyObject *tmp, *retval = NULL;
@@ -554,7 +554,7 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 
 
 void
-_check_signal(ClientData clientdata)
+mainloop_check_signal(ClientData clientdata)
 {
 	TclInterpObj *self = clientdata;
 	PyGILState_STATE gstate = PyGILState_Ensure();
@@ -564,7 +564,8 @@ _check_signal(ClientData clientdata)
 		self->running = 0;
 	}
 	else
-		Tcl_CreateTimerHandler(self->err_check_interval, _check_signal, self);
+		Tcl_CreateTimerHandler(self->err_check_interval,
+				mainloop_check_signal, self);
 
 	PyGILState_Release(gstate);
 }
@@ -578,7 +579,8 @@ TclInterp_mainloop(TclInterpObj *self)
 #define mainloop_go_on \
 	(self->tk_loaded ? self->running && Tk_GetNumMainWindows() : self->running)
 
-	Tcl_CreateTimerHandler(self->err_check_interval, _check_signal, self);
+	Tcl_CreateTimerHandler(self->err_check_interval,
+			mainloop_check_signal, self);
 	self->running = 1;
 
 	/* XXX XXX */
