@@ -15,7 +15,8 @@ typedef struct {
 
     int running;
     int tk_loaded;
-    int _error_in_cb; /* 1 when error occurs in a callback, 2 when bgerror */
+    int err_in_cb; /* 1 when error occurs in a callback, 2 when bgerror */
+	int err_check_interval;
 
     PyObject *bgerr_handler;
     PyObject *commands;
