@@ -309,6 +309,18 @@ _call(TclInterpObj *self, PyObject *args)
 	PyObject *tmp, *retval = NULL;
 	Py_ssize_t i, objc = PyTuple_Size(args);
 
+	/* XXX Tkinter compatibility:
+	 * If args is a single tuple, replace it with the tuple contents */
+	if (objc == 1) {
+		PyObject *item = PyTuple_GetItem(args, 0);
+		if (PyTuple_Check(item)) {
+			Py_DECREF(args);
+			Py_INCREF(item);
+			args = item;
+			objc = PyTuple_Size(item);
+		}
+	}
+
 	if (objc == 0) {
 		PyErr_SetString(PyExc_TypeError,
 				"call expected at least 1 argument, got 0");
@@ -624,6 +636,18 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 	char *tcllist;
 	const char **elements;
 	int listsize, i;
+
+	/* This method is called with the uncertainty of Tcl returning a string
+	 * or a Tcl list in some cases. If it happens to return a Tcl list then
+	 * it gets converted to a Python tuple and we need to do nothing here. */
+	if (PyTuple_Size(args) == 1) {
+		result = PyTuple_GetItem(args, 0);
+		if (PyTuple_Check(result)) {
+			Py_INCREF(result);
+			return result;
+		}
+		result = NULL;
+	}
 
 	//if (!PyArg_ParseTuple(args, "et:splitlist", &tcllist))
 	if (!PyArg_ParseTuple(args, "s:splitlist", &tcllist))
