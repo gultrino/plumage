@@ -49,13 +49,6 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 
 		Tcl_ListObjLength(self->interp, obj, &length);
 
-		/* XXX can't it re-enter here forever ? */
-		if (length == 1) {
-			printf("single list element!\n");
-			Tcl_ListObjIndex(self->interp, obj, 0, &value);
-			return TclObj_ToPy(self, value);
-		}
-
 		pyobj = PyTuple_New(length);
 		if (pyobj == NULL)
 			return PyErr_NoMemory();
@@ -235,10 +228,6 @@ PyObj_ToTcl(PyObject *obj)
 		ckfree((char *)objv);
 #endif
 	}
-
-	/* XXX uhmm.. */
-	else if (obj == Py_None)
-		tclobj = Tcl_NewStringObj("", -1);
 
 	else {
 		PyObject *temp = PyObject_Str(obj);
