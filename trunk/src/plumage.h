@@ -19,7 +19,6 @@ typedef struct {
 	long err_check_interval;
 
 	PyObject *bgerr_handler;
-	PyObject *commands;
 	/* Tcl types */
 	Tcl_ObjType *IntType;
 	Tcl_ObjType *ListType;
