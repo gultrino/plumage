@@ -39,27 +39,40 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		return NULL;
 
 	if (obj->typePtr == NULL) {
-		int length, i;
-		char *objstr = Tcl_GetStringFromObj(obj, &length);
+		int len, i;
+		char *cstr, *objstr = Tcl_GetStringFromObj(obj, &len);
 
 #ifdef Py_USING_UNICODE
 		/* If the Tcl object contains any bytes with the top bit set,
 		 * it's UTF-8 and we should decode it to Unicode */
-		for (i = 0; i < length; i++) {
+		for (i = 0; i < len; i++) {
 			if (obj->bytes[i] & 0x80)
 				break;
 		}
 
-		if (i == length)
-			pyobj = PyString_FromStringAndSize(objstr, length);
+		if (i == len)
+			pyobj = PyString_FromStringAndSize(objstr, len);
 		else {
-			/* Convert UTF-8 to Unicode string */
-			pyobj = PyUnicode_DecodeUTF8(objstr, length, "strict");
-			if (pyobj == NULL) {
-				/* Received some invalid UTF-8 */
-				PyErr_Clear();
-				pyobj = PyString_FromStringAndSize(objstr, length);
+			/* Before converting from UTF-8 we must check if Tcl didn't
+			 * let a 0xC0 0x80 slip out. If this sequence is found, anything
+			 * after it is discarded and it is considered as the string
+			 * terminator. */
+			cstr = objstr + i;
+			for (; i < len; cstr++, i++) {
+				if (*cstr == '\xC0' && i + 1 < len) {
+					if (*(cstr + 1) == '\x80') {
+						/* Found the sequence 0xC0 0x80 */
+						len = i;
+						break;
+					}
+					/* Skip next byte */
+					cstr++;
+					i++;
+				}
 			}
+
+			/* Convert UTF-8 to Unicode string */
+			pyobj = PyUnicode_DecodeUTF8(objstr, len, "strict");
 		}
 #else
 		pyobj = PyString_FromStringAndSize(objstr, length);
