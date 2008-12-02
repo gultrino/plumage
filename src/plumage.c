@@ -828,7 +828,6 @@ error:
 #define TclList_AddStrOpt(interp, list, option)					\
 	do {														\
 	    if (option != NULL) {									\
-		    printf("storing %s: %s\n", "-" #option, option);	\
 			TclList_AddStr(interp, list, "-" #option);			\
 	        TclList_AddStr(interp, list, option);				\
 		}														\
