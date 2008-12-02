@@ -732,7 +732,7 @@ TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
 static PyObject *
 TclInterp_getthreaded(TclInterpObj *self, void *closure)
 {
-	return PyBool_FromLong(self->tcl_thread_id != NULL);
+	return PyBool_FromLong(self->tcl_thread_id != 0);
 }
 
 static PyObject *
@@ -744,12 +744,8 @@ TclInterp_gettkloaded(TclInterpObj *self, void *closure)
 static PyObject *
 TclInterp_getthreadid(TclInterpObj *self, void *closure)
 {
-	if (self->tcl_thread_id == NULL)
-		Py_RETURN_NONE;
-	else {
-		/* XXX how incorrect is this ? */
-		return Py_BuildValue("l", self->tcl_thread_id);
-	}
+	/* XXX how incorrect is this ? */
+	return Py_BuildValue("l", self->tcl_thread_id);
 }
 
 static PyGetSetDef TclInterp_getset[] = {
@@ -802,10 +798,7 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 #endif
 
 	self->py_thread_id = PyThread_get_thread_ident();
-	if (Tcl_GetVar2(self->interp,
-				"tcl_platform", "threaded", TCL_GLOBAL_ONLY)) {
-		self->tcl_thread_id = Tcl_GetCurrentThread();
-	}
+	self->tcl_thread_id = Tcl_GetCurrentThread();
 
 	self->running = 0;
 	self->tk_loaded = 0;
