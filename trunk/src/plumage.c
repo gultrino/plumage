@@ -385,6 +385,12 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 		CONST char *argv[])
 {
 	TclInterpObj *self = clientdata;
+
+	if (self == NULL) {
+		printf("This instance is gone!");
+		return TCL_ERROR;
+	}
+
 	const char *error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
 	PyGILState_STATE gstate = PyGILState_Ensure();
 
@@ -405,13 +411,6 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 end:
 	PyGILState_Release(gstate);
 	return TCL_OK;
-}
-
-void
-TclPyBridge_bgerr_delete(ClientData clientdata)
-{
-	TclInterpObj *ob = clientdata;
-	Py_XDECREF(ob);
 }
 
 struct TclPyBridge {
@@ -811,9 +810,7 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	 * why would you want to do that from Tcl besides for annoying me ? */
 	Tcl_DeleteCommand(self->interp, "exit");
 
-	Py_INCREF(self);
-	Tcl_CreateCommand(self->interp, "bgerror", TclPyBridge_bgerr,
-			self, TclPyBridge_bgerr_delete);
+	Tcl_CreateCommand(self->interp, "bgerror", TclPyBridge_bgerr, self, NULL);
 
 	return (PyObject *)self;
 
@@ -839,6 +836,11 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 	if (use_tk) {
 		if (TclInterp_loadtk(self) == NULL)
 			return -1;
+		else {
+			/* If TclInterp_loadtk succeeded then there is an extra Py_None
+			 * around since we are not using it. */
+			Py_DECREF(Py_None);
+		}
 	}
 
 	if (bgerr_handler != NULL) {
