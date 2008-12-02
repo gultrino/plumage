@@ -39,8 +39,9 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		return NULL;
 
 	if (obj->typePtr == NULL) {
-		int len, i;
-		char *cstr, *objstr = Tcl_GetStringFromObj(obj, &len);
+		int len, clen, i;
+		char *nullstr, *cstr, *objstr = Tcl_GetStringFromObj(obj, &len);
+		char *end = objstr + len;
 
 #ifdef Py_USING_UNICODE
 		/* If the Tcl object contains any bytes with the top bit set,
@@ -54,28 +55,28 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 			pyobj = PyString_FromStringAndSize(objstr, len);
 		else {
 			/* Before converting from UTF-8 we must check if Tcl didn't
-			 * let a 0xC0 0x80 slip out. If this sequence is found, anything
-			 * after it is discarded and it is considered as the string
-			 * terminator. */
+			 * let some 0xC0 0x80 slip out. If we happen to find any embedded
+			 * nulls then we replace them by a 0. */
 			cstr = objstr + i;
-			for (; i < len; cstr++, i++) {
-				if (*cstr == '\xC0' && i + 1 < len) {
-					if (*(cstr + 1) == '\x80') {
-						/* Found the sequence 0xC0 0x80 */
-						len = i;
-						break;
-					}
-					/* Skip next byte */
-					cstr++;
-					i++;
+			clen = len - i;
+
+			while ((nullstr = memchr(cstr, '\xC0', clen))) {
+				if (nullstr + 1 < end && *(nullstr + 1) == '\x80') {
+					/* Found the bytes 0xC0 0x80, replace them by a 0 */
+					nullstr[0] = '\0';
+					memmove(nullstr + 1, nullstr + 2, end - (nullstr + 2));
+					len--;
+					end--;
 				}
+				clen -= (nullstr + 1) - cstr;
+				cstr = nullstr + 1;
 			}
 
 			/* Convert UTF-8 to Unicode string */
 			pyobj = PyUnicode_DecodeUTF8(objstr, len, "strict");
 		}
 #else
-		pyobj = PyString_FromStringAndSize(objstr, length);
+		pyobj = PyString_FromStringAndSize(objstr, len);
 #endif
 	}
 
