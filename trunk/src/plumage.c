@@ -856,7 +856,7 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 		"colormap", "display", "name", "sync", "use", "visual",
 		NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iOsssiis", kwlist,
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iOzzziiz", kwlist,
 				&use_tk, &bgerr_handler, &colormap, &display, &name, &sync,
 				&use, &visual))
 		return -1;
