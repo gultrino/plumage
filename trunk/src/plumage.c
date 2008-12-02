@@ -819,21 +819,61 @@ error:
 	return NULL;
 }
 
+#define TclList_AddStr(interp, list, strthing)	\
+    Tcl_ListObjAppendElement(interp, list, Tcl_NewStringObj(strthing, -1))
+
+#define TclList_AddInt(interp, list, intthing)	\
+	Tcl_ListObjAppendElement(interp, list, Tcl_NewIntObj(intthing))
+
+#define TclList_AddStrOpt(interp, list, option)					\
+	do {														\
+	    if (option != NULL) {									\
+		    printf("storing %s: %s\n", "-" #option, option);	\
+			TclList_AddStr(interp, list, "-" #option);			\
+	        TclList_AddStr(interp, list, option);				\
+		}														\
+	} while (0)
+
+#define TclList_AddIntOpt(interp, list, option)			\
+	do {												\
+		if (option) {									\
+			TclList_AddStr(interp, list, "-" #option);	\
+			TclList_AddInt(interp, list, option);		\
+		}												\
+	} while (0)
+
 static int
 TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 {
-	PyObject *bgerr_handler = NULL;
-	int use_tk = 1;
+	PyObject *bgerr_handler=NULL;
+	int use_tk=1, sync=0, use=0;
+	char *colormap=NULL, *display=NULL, *name=NULL, *visual=NULL;
+	Tcl_Obj *tcl_argv;
 
-	/* XXX several args missing here: display, name, use, etc..
-	 * will add support for them later */
-	static char *kwlist[] = {"use_tk", "bgerror_handler", NULL};
+	static char *kwlist[] = {
+		/* Plumage args */
+		"use_tk", "bgerror_handler",
+		/* Tk args */
+		"colormap", "display", "name", "sync", "use", "visual",
+		NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iO", kwlist,
-				&use_tk, &bgerr_handler))
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iOsssiis", kwlist,
+				&use_tk, &bgerr_handler, &colormap, &display, &name, &sync,
+				&use, &visual))
 		return -1;
 
 	if (use_tk) {
+		tcl_argv = Tcl_NewListObj(0, NULL);
+
+		TclList_AddStrOpt(self->interp, tcl_argv, colormap);
+		TclList_AddStrOpt(self->interp, tcl_argv, display);
+		TclList_AddStrOpt(self->interp, tcl_argv, name);
+		TclList_AddIntOpt(self->interp, tcl_argv, use);
+		TclList_AddStrOpt(self->interp, tcl_argv, visual);
+		if (sync)
+			TclList_AddStr(self->interp, tcl_argv, "sync");
+		Tcl_SetVar2Ex(self->interp, "argv", NULL, tcl_argv, TCL_GLOBAL_ONLY);
+
 		if (TclInterp_loadtk(self) == NULL)
 			return -1;
 		else {
