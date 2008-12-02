@@ -476,11 +476,6 @@ TclPyBridge_delete(ClientData clientdata)
 {
 	struct TclPyBridge *cdata = clientdata;
 
-	if (cdata == NULL) {
-		printf("NULL here ? how ?\n");
-		return;
-	}
-
 	Py_XDECREF(cdata->cb);
 	Py_XDECREF(cdata->cb_args);
 	Py_XDECREF(cdata->pytcl);
@@ -490,12 +485,15 @@ TclPyBridge_delete(ClientData clientdata)
 static PyObject *
 TclInterp_createcommand(TclInterpObj *self, PyObject *args)
 {
+	int presult;
 	char *funcname;
-	PyObject *cb;
+	PyObject *cb, *name_cb;
 	struct TclPyBridge *clientdata;
 
-	if (!PyArg_ParseTuple(PyTuple_GetSlice(args, 0, 2), "sO:createcommand",
-			&funcname, &cb))
+	name_cb = PyTuple_GetSlice(args, 0, 2);
+	presult = PyArg_ParseTuple(name_cb, "sO:createcommand", &funcname, &cb);
+	Py_DECREF(name_cb);
+	if (!presult)
 		return NULL;
 
 	if (!PyCallable_Check(cb)) {
@@ -507,11 +505,12 @@ TclInterp_createcommand(TclInterpObj *self, PyObject *args)
 	PyObject *cb_args = PyTuple_GetSlice(args, 2, PyTuple_Size(args));
 
 	clientdata = PyMem_Malloc(sizeof(struct TclPyBridge));
-	if (clientdata == NULL)
+	if (clientdata == NULL) {
+		Py_DECREF(cb_args);
 		return PyErr_NoMemory();
+	}
 
 	Py_INCREF(cb);
-	Py_INCREF(cb_args);
 	Py_INCREF(self);
 	clientdata->cb = cb;
 	clientdata->cb_args = cb_args;
@@ -523,9 +522,6 @@ TclInterp_createcommand(TclInterpObj *self, PyObject *args)
 				"command not created");
 		goto error;
 	}
-
-	if (PyDict_SetItemString(self->commands, funcname, cb))
-		goto error;
 
 	Py_RETURN_NONE;
 
@@ -545,8 +541,6 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 
 	if (!Tcl_DeleteCommand(self->interp, command)) {
 		/* command existed, now it is gone */
-		if (PyDict_DelItemString(self->commands, command))
-			return NULL;
 		Py_RETURN_TRUE;
 	} else
 		Py_RETURN_FALSE;
@@ -800,7 +794,7 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
 	if (Tcl_Init(self->interp) == TCL_ERROR) {
 		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
-		return NULL;
+		goto error;
 	}
 
 #ifdef TCL_MEM_DEBUG
@@ -813,8 +807,6 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 		self->tcl_thread_id = Tcl_GetCurrentThread();
 	}
 
-	if ((self->commands = PyDict_New()) == NULL)
-		return NULL;
 	self->running = 0;
 	self->tk_loaded = 0;
 	self->err_in_cb = 0;
@@ -831,6 +823,10 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 			self, TclPyBridge_bgerr_delete);
 
 	return (PyObject *)self;
+
+error:
+	Py_DECREF(self);
+	return NULL;
 }
 
 static int
@@ -868,13 +864,6 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 void
 TclInterp_dealloc(TclInterpObj *self)
 {
-	PyObject *cmdkeys = PyDict_Keys(self->commands);
-	Py_ssize_t i, len = PyList_GET_SIZE(cmdkeys);
-
-	for (i = 0; i < len; i++)
-		TclInterp_deletecommand(self, PyList_GET_ITEM(cmdkeys, i));
-
-	Py_DECREF(self->commands);
 	Py_XDECREF(self->bgerr_handler);
 	Tcl_DeleteInterp(self->interp);
 	self->ob_type->tp_free((PyObject *)self);
