@@ -143,11 +143,14 @@ TclInterp_get_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
+	Tcl_Preserve(self->interp);
 	if (tclvar)
 		result = TclObj_ToPy(self,
 				Tcl_ObjGetVar2(self->interp, tclvar, NULL, PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
+	Tcl_Release(self->interp);
+
 	return result;
 }
 
@@ -166,12 +169,14 @@ TclInterp_set_var(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
+	Tcl_Preserve(self->interp);
 	if (tclvar)
 		result = TclObj_ToPy(self,
 				Tcl_ObjSetVar2(self->interp, tclvar, NULL, PyObj_ToTcl(varval),
 					PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
+	Tcl_Release(self->interp);
 	return result;
 }
 
@@ -207,12 +212,14 @@ TclInterp_get_arrayvar(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
+	Tcl_Preserve(self->interp);
 	if (tclvar)
 		result = TclObj_ToPy(self,
 				Tcl_ObjGetVar2(self->interp, tclvar, PyObj_ToTcl(element),
 					PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
+	Tcl_Release(self->interp);
 	return result;
 }
 
@@ -232,12 +239,14 @@ TclInterp_set_arrayvar(TclInterpObj *self, PyObject *args)
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
+	Tcl_Preserve(self->interp);
 	if (tclvar)
 		result = TclObj_ToPy(self,
 				Tcl_ObjSetVar2(self->interp, tclvar, PyObj_ToTcl(element),
 					PyObj_ToTcl(varval), PLUMAGE_VAR_FLAGS));
 
 	CheckResult;
+	Tcl_Release(self->interp);
 	return result;
 }
 
@@ -277,10 +286,12 @@ TclPyBridge_eval(TclInterpObj *self, PyObject *args)
 	if (!flags)
 		flags = TCL_EVAL_DIRECT;
 
+	Tcl_Preserve(self->interp);
 	if (Tcl_EvalEx(self->interp, evalstr, -1, flags) != TCL_OK)
 		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 	else
 		result = TclObj_ToPy(self, Tcl_GetObjResult(self->interp));
+	Tcl_Release(self->interp);
 
 	Py_DECREF(args);
 	return result;
@@ -346,6 +357,7 @@ TclPyBridge_call(TclInterpObj *self, PyObject *args)
 		Tcl_IncrRefCount(objv[i]);
 	}
 
+	Tcl_Preserve(self->interp);
 	if (Tcl_EvalObjv(self->interp, objc, objv, TCL_EVAL_GLOBAL) != TCL_OK) {
 		if (self->err_in_cb) {
 			self->err_in_cb = 0;
@@ -366,6 +378,7 @@ TclPyBridge_call(TclInterpObj *self, PyObject *args)
 			}
 		}
 	}
+	Tcl_Release(self->interp);
 
 tcl_dealloc:
 	i--;
