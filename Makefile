@@ -9,8 +9,9 @@ TCL_CONFIG=$(TCL_CONFIG_DIR)/tclConfig.sh
 TK_CONFIG=$(TK_CONFIG_DIR)/tkConfig.sh
 
 SRC_DIR=src
+TEST_DIR=test
 
-build: $(SRC_DIR)/plumage.c $(SRC_DIR)/utils.c
+build: $(SRC_DIR)/plumage.c $(SRC_DIR)/utils.c $(TEST_DIR)/_tclnull_tonull.c
 	TCL_CONFIG=$(TCL_CONFIG) \
 	TK_CONFIG=$(TK_CONFIG) \
 	$(PYTHON) setup.py install_lib --install-dir $(INSTALL_DIR)
@@ -18,4 +19,4 @@ build: $(SRC_DIR)/plumage.c $(SRC_DIR)/utils.c
 # Warning!
 clean:
 	rm -rf build
-	rm -rf plumage.so
+	rm -rf plumage.so _tclnull_tonull.so
