@@ -265,7 +265,7 @@ TclPyBridge_eval(TclInterpObj *self, PyObject *args)
 {
 	RetryIfNeeded(NULL, TclPyEvent_eval);
 
-	int flags = -1;
+	int flags = 0;
 	char *evalstr;
 	PyObject *result = NULL;
 
@@ -274,7 +274,7 @@ TclPyBridge_eval(TclInterpObj *self, PyObject *args)
 		return NULL;
 	}
 
-	if (flags == -1)
+	if (!flags)
 		flags = TCL_EVAL_DIRECT;
 
 	if (Tcl_EvalEx(self->interp, evalstr, -1, flags) != TCL_OK)
@@ -432,6 +432,10 @@ TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
 	/* first arg in objv is the command name, discard it */
 	--objc;
 
+	/* Do not proceeed if error is still set for this instance. */
+	if (cdata->pytcl->err_in_cb)
+		return TCL_ERROR;
+
 	gstate = PyGILState_Ensure();
 
 	/* func_args will be a combination (in this order) of args that were
@@ -455,8 +459,8 @@ TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
 	if (temp == NULL)
 		goto error;
 	else {
-		Tcl_SetObjResult(cdata->pytcl->interp, PyObj_ToTcl(temp));
 		Py_DECREF(func_args);
+		Tcl_SetObjResult(cdata->pytcl->interp, PyObj_ToTcl(temp));
 	}
 
 	PyGILState_Release(gstate);
@@ -572,9 +576,9 @@ TclInterp_mainloop(TclInterpObj *self)
 #define mainloop_go_on \
 	(self->tk_loaded ? self->running && Tk_GetNumMainWindows() : self->running)
 
+	self->running = 1;
 	Tcl_CreateTimerHandler(self->err_check_interval,
 			mainloop_check_signal, self);
-	self->running = 1;
 
 	/* XXX XXX */
 	while (mainloop_go_on) {
