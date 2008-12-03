@@ -55,8 +55,8 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 			pyobj = PyString_FromStringAndSize(objstr, len);
 		else {
 			/* Before converting from UTF-8 we must check if Tcl didn't
-			 * let some 0xC0 0x80 slip out. If we happen to find any embedded
-			 * nulls then we replace them by a 0. */
+			 * let some 0xC0 0x80 slip out. If we happen to find any
+			 * (Tcl/Java) embedded nulls then we replace them by a 0. */
 			cstr = objstr + i;
 			clen = len - i;
 
