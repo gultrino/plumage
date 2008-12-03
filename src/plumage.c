@@ -460,7 +460,7 @@ TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
 		goto error;
 	else {
 		Py_DECREF(func_args);
-		Tcl_SetObjResult(cdata->pytcl->interp, PyObj_ToTcl(temp));
+		Tcl_SetObjResult(interp, PyObj_ToTcl(temp));
 	}
 
 	PyGILState_Release(gstate);
