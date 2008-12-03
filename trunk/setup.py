@@ -8,7 +8,8 @@ import sys
 import subprocess
 from distutils.core import setup, Extension
 
-SRCDIR="src"
+SRCDIR = "src"
+TESTDIR = "test"
 
 class MissingTclTkConfig(EnvironmentError):
     pass
@@ -17,7 +18,7 @@ def get_paths(path, prefix):
     bash = subprocess.Popen(['bash'], stdin=subprocess.PIPE,
         stdout=subprocess.PIPE)
 
-    bash.stdin.write('source %s\n' % path)
+    bash.stdin.write("source %s\n" % path)
     for name in ("%s_LIB_SPEC", "%s_INCLUDE_SPEC"):
         bash.stdin.write('echo `eval echo $%s`\n' % (name % prefix))
     result = bash.communicate()[0].strip().split('\n')
@@ -49,12 +50,20 @@ def main(args):
     else:
         tcltk_paths = get_tcltk_paths()
 
+    c_tcltk_paths = tcltk_paths
+    c_tcltk_paths['include_dirs'] += (SRCDIR, )
+
     setup(name="plumage",
         ext_modules=[
             Extension("plumage",
                 [os.path.join(SRCDIR, "plumage.c"),
-                 os.path.join(SRCDIR,  "utils.c")],
-            **tcltk_paths)
+                    os.path.join(SRCDIR,  "utils.c")],
+                **tcltk_paths),
+            # C test
+            Extension("_tclnull_tonull",
+                [os.path.join(TESTDIR, "_tclnull_tonull.c"),
+                    os.path.join(SRCDIR, "utils.c")],
+                **c_tcltk_paths),
         ]
     )
 
