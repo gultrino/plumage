@@ -563,7 +563,22 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 }
 
 
-void
+static PyObject *
+TclInterp_do_one_event(PyObject *self, PyObject *args)
+{
+	int result, flags = 0;
+
+	if (!PyArg_ParseTuple(args, "|i:do_one_event", &flags))
+		return NULL;
+
+	Py_BEGIN_ALLOW_THREADS
+	result = Tcl_DoOneEvent(flags);
+	Py_END_ALLOW_THREADS
+
+	return Py_BuildValue("i", result);
+}
+
+static void
 mainloop_check_signal(ClientData clientdata)
 {
 	TclInterpObj *self = clientdata;
@@ -689,7 +704,7 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 static PyMethodDef TclInterp_methods[] = {
 	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, NULL},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
-	{"load_tk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
+	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
 	{"get_var", (PyCFunction)TclInterp_get_var, METH_VARARGS, NULL},
 	{"set_var", (PyCFunction)TclInterp_set_var, METH_VARARGS, NULL},
 	{"unset_var", (PyCFunction)TclInterp_unset_var, METH_VARARGS, NULL},
@@ -701,6 +716,7 @@ static PyMethodDef TclInterp_methods[] = {
 		NULL},
 	{"deletecommand", (PyCFunction)TclInterp_deletecommand, METH_VARARGS,
 		NULL},
+	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS, NULL},
 	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, NULL},
 	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, NULL},
 
