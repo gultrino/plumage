@@ -43,7 +43,6 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		char *nullstr, *cstr, *objstr = Tcl_GetStringFromObj(obj, &len);
 		char *end = objstr + len;
 
-#ifdef Py_USING_UNICODE
 		/* If the Tcl object contains any bytes with the top bit set,
 		 * it's UTF-8 and we should decode it to Unicode */
 		for (i = 0; i < len; i++) {
@@ -75,9 +74,6 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 			/* Convert UTF-8 to Unicode string */
 			pyobj = PyUnicode_DecodeUTF8(objstr, len, "strict");
 		}
-#else
-		pyobj = PyString_FromStringAndSize(objstr, len);
-#endif
 	}
 
 	else if (obj->typePtr == self->IntType)
