@@ -968,17 +968,9 @@ static PyMethodDef module_methods[] = {
 };
 
 
-#define AddConst_ErrChk(func, attr, value)	\
-	do {									\
-		if (func(m, attr, value) == -1)		\
-			return;							\
-	} while (0)
+#define AddStringConst(value) PyModule_AddStringConstant(m, #value, value)
 
-#define AddStringConst_ErrChk(value) \
-	AddConst_ErrChk(PyModule_AddStringConstant, #value, value)
-
-#define AddIntConst_ErrChk(value) \
-	AddConst_ErrChk(PyModule_AddIntConstant, #value, value)
+#define AddIntConst(value) PyModule_AddIntConstant(m, #value, value)
 
 PyMODINIT_FUNC
 initplumage(void)
@@ -1005,17 +997,21 @@ initplumage(void)
 	PyModule_AddObject(m, "Interp", (PyObject *)&TclInterpType);
 
 	/* constants */
-	AddStringConst_ErrChk(TCL_VERSION);
-	AddStringConst_ErrChk(TCL_PATCH_LEVEL);
-	AddStringConst_ErrChk(TK_VERSION);
-	AddStringConst_ErrChk(TK_PATCH_LEVEL);
+	AddStringConst(TCL_VERSION);
+	AddStringConst(TCL_PATCH_LEVEL);
+	AddStringConst(TK_VERSION);
+	AddStringConst(TK_PATCH_LEVEL);
+	/* FileHandler flags */
+	AddIntConst(TCL_READABLE);
+	AddIntConst(TCL_WRITABLE);
+	AddIntConst(TCL_EXCEPTION);
 	/* DoOneEvent flags */
-	AddIntConst_ErrChk(TCL_WINDOW_EVENTS);
-	AddIntConst_ErrChk(TCL_FILE_EVENTS);
-	AddIntConst_ErrChk(TCL_TIMER_EVENTS);
-	AddIntConst_ErrChk(TCL_IDLE_EVENTS);
-	AddIntConst_ErrChk(TCL_ALL_EVENTS);
-	AddIntConst_ErrChk(TCL_DONT_WAIT);
+	AddIntConst(TCL_WINDOW_EVENTS);
+	AddIntConst(TCL_FILE_EVENTS);
+	AddIntConst(TCL_TIMER_EVENTS);
+	AddIntConst(TCL_IDLE_EVENTS);
+	AddIntConst(TCL_ALL_EVENTS);
+	AddIntConst(TCL_DONT_WAIT);
 
 	/* Taken from tcl doc/source (XXX unmix this):
 	 *
@@ -1033,4 +1029,7 @@ initplumage(void)
 	 * call.
 	 */
 	Tcl_FindExecutable(Py_GetProgramName());
+
+	if (PyErr_Occurred())
+		return;
 }
