@@ -702,9 +702,11 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 }
 
 static PyMethodDef TclInterp_methods[] = {
+	/* Calling into Tcl */
 	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, NULL},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
-	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
+
+	/* Variables in Tcl */
 	{"get_var", (PyCFunction)TclInterp_get_var, METH_VARARGS, NULL},
 	{"set_var", (PyCFunction)TclInterp_set_var, METH_VARARGS, NULL},
 	{"unset_var", (PyCFunction)TclInterp_unset_var, METH_VARARGS, NULL},
@@ -712,14 +714,22 @@ static PyMethodDef TclInterp_methods[] = {
 	{"set_arrayvar", (PyCFunction)TclInterp_set_arrayvar, METH_VARARGS, NULL},
 	{"unset_arrayvar", (PyCFunction)TclInterp_unset_arrayvar, METH_VARARGS,
 		NULL},
+
+	/* Commands in Tcl */
 	{"createcommand", (PyCFunction)TclInterp_createcommand, METH_VARARGS,
 		NULL},
 	{"deletecommand", (PyCFunction)TclInterp_deletecommand, METH_VARARGS,
 		NULL},
+
+	/* Events in Tcl */
 	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS, NULL},
 	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, NULL},
 	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, NULL},
 
+	/* Tk specific */
+	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
+
+	/* Utilities */
 	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS, NULL},
 	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS, NULL},
 
