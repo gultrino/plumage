@@ -7,7 +7,7 @@ REQUIRE_GUI = ()
 
 def show_tcl_tk():
     tk_ver = plumage.TK_VERSION
-    print "Tcl %s, Tk %s" % (plumage.TCL_VERSION, tk_ver)
+    print("Tcl %s, Tk %s" % (plumage.TCL_VERSION, tk_ver))
 
 def get_tests(gui_tests=True):
     testdir = os.path.dirname(sys.argv[0]) or os.curdir
@@ -31,7 +31,7 @@ def main(args):
     show_tcl_tk()
     run_tests(get_tests(gui_tests))
     if not gui_tests:
-        print "\n** GUI tests didn't run **"
+        print("\n** GUI tests didn't run **")
 
 if __name__ == "__main__":
     main(sys.argv)

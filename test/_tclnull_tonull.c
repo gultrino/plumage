@@ -38,6 +38,7 @@ test_conversion(PyObject *self, PyObject *args)
 	/* now we verify if it is what we really want */
 	uni_size = PyUnicode_GetSize(ob);
 	if (uni_size != explen) {
+		PyObject_Print(ob, stdout, 0);
 		PyErr_Format(TestError, "conversion was not done properly, "
 				"expected length was %d, got %d", explen, uni_size);
 		Py_DECREF(ob);
@@ -64,23 +65,47 @@ static PyMethodDef test_methods[] = {
 };
 
 
-PyMODINIT_FUNC
-init_tclnull_tonull(void)
-{
-	PyObject *m, *plumage;
+static struct PyModuleDef _tclnull_to_null = {
+	PyModuleDef_HEAD_INIT,		/* m_base */
+	"_tclnull_to_null",			/* m_name */
+	NULL,						/* m_doc */
+	-1,							/* m_size */
+	test_methods,				/* m_methods */
+	NULL,						/* m_reload */
+	NULL,						/* m_traverse */
+	NULL,						/* m_clear */
+	NULL						/* m_free */
+};
 
-	m = Py_InitModule("_tclnull_tonull", test_methods);
-	if (m == NULL)
-		return;
+PyMODINIT_FUNC
+PyInit__tclnull_tonull(void)
+{
+	PyObject *m, *plumage, *interp;
+
+	if (!(m = PyModule_Create(&_tclnull_to_null)))
+		return NULL;
 
 	plumage = PyImport_ImportModule("plumage");
-	if (plumage == NULL)
-		return;
+	if (plumage == NULL) {
+		Py_DECREF(m);
+		return NULL;
+	}
 
-	tclpy = (TclInterpObj *)PyObject_CallObject(
-			PyObject_GetAttrString(plumage, "Interp"), NULL);
+	interp = PyObject_GetAttrString(plumage, "Interp");
+	if (!interp) {
+		Py_DECREF(m);
+		return NULL;
+	}
+	tclpy = (TclInterpObj *)PyObject_CallObject(interp, NULL);
+	Py_DECREF(interp);
+	if (!tclpy) {
+		Py_DECREF(m);
+		return NULL;
+	}
 
 	TestError = PyErr_NewException("_tclnull_tonull.error", NULL, NULL);
 	Py_INCREF(TestError);
 	PyModule_AddObject(m, "error", TestError);
+
+	return m;
 }

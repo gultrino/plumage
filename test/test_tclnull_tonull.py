@@ -4,10 +4,10 @@ import unittest
 import _tclnull_tonull
 
 tests = (
-        ("\xC0\x80", "\x00"),
-        ("\xC0\x80\xC0\x80", "\x00\x00"),
-        ("\xC0\200a\xC0\x80", "\000a\x00"),
-        ("hi\xC0\x80ihabc", "hi\x00ihabc")
+        (b"\xC0\x80", b"\x00"),
+        (b"\xC0\x80\xC0\x80", b"\x00\x00"),
+        (b"\xC0\200a\xC0\x80", b"\000a\x00"),
+        (b"hi\xC0\x80ihabc", b"hi\x00ihabc")
         )
 
 class ConversionTest(unittest.TestCase):

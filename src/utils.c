@@ -52,7 +52,7 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		}
 
 		if (i == len)
-			pyobj = PyString_FromStringAndSize(objstr, len);
+			pyobj = PyUnicode_FromStringAndSize(objstr, len);
 		else {
 			/* Before converting from UTF-8 we must check if Tcl didn't
 			 * let some 0xC0 0x80 slip out. If we happen to find any
@@ -81,7 +81,7 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 	}
 
 	else if (obj->typePtr == self->IntType)
-		pyobj = PyInt_FromLong(obj->internalRep.longValue);
+		pyobj = PyLong_FromLong(obj->internalRep.longValue);
 
 	else if (obj->typePtr == self->DoubleType)
 		pyobj = PyFloat_FromDouble(obj->internalRep.doubleValue);
@@ -134,15 +134,11 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 	else if (obj->typePtr == self->ByteArrayType) {
 		int length;
 		unsigned char *bytes = Tcl_GetByteArrayFromObj(obj, &length);
-#if PY_VERSION_HEX >= 0x2060000
 		pyobj = PyByteArray_FromStringAndSize((const char *)bytes, length);
-#else
-		pyobj = PyString_FromStringAndSize((const char *)bytes, length);
-#endif
 	}
 
 	else
-		pyobj = PyString_FromString(Tcl_GetStringFromObj(obj, NULL));
+		pyobj = PyUnicode_FromString(Tcl_GetStringFromObj(obj, NULL));
 
 	return pyobj;
 
@@ -164,13 +160,13 @@ PyObj_ToTcl(PyObject *obj)
 	if (obj == NULL)
 		return NULL;
 
-	if (PyString_Check(obj)) {
-		tclobj = Tcl_NewStringObj(PyString_AS_STRING(obj),
-				PyString_GET_SIZE(obj));
+	if (PyUnicode_Check(obj)) {
+		tclobj = Tcl_NewStringObj(PyUnicode_AS_DATA(obj),
+				PyUnicode_GET_SIZE(obj));
 	}
 
-	else if (PyInt_Check(obj))
-		tclobj = Tcl_NewLongObj(PyInt_AS_LONG(obj));
+	else if (PyLong_Check(obj))
+		tclobj = Tcl_NewLongObj(PyLong_AS_LONG(obj));
 
 	else if (PyFloat_Check(obj))
 		tclobj = Tcl_NewDoubleObj(PyFloat_AS_DOUBLE(obj));
@@ -183,18 +179,16 @@ PyObj_ToTcl(PyObject *obj)
 		if (utf8str == NULL)
 			return NULL;
 
-		tclobj = Tcl_NewStringObj(PyString_AS_STRING(utf8str),
-				PyString_GET_SIZE(utf8str));
+		tclobj = Tcl_NewStringObj(PyUnicode_AS_DATA(utf8str),
+				PyUnicode_GET_SIZE(utf8str));
 		Py_DECREF(utf8str);
 	}
 
-#if PY_VERSION_HEX >= 0x2060000
 	else if (PyByteArray_Check(obj)) {
 		tclobj = Tcl_NewByteArrayObj(
 				(const unsigned char*)PyByteArray_AS_STRING(obj),
 				PyByteArray_GET_SIZE(obj));
 	}
-#endif
 
 	else if (PyTuple_Check(obj) || PyList_Check(obj)) {
 		Py_ssize_t i, objc = PySequence_Size(obj);
@@ -268,7 +262,7 @@ PyObj_ToTcl(PyObject *obj)
 
 	else {
 		PyObject *temp = PyObject_Str(obj);
-		tclobj = Tcl_NewStringObj(PyString_AsString(temp), -1);
+		tclobj = Tcl_NewStringObj(PyUnicode_AS_DATA(temp), -1);
 		Py_DECREF(temp);
 	}
 

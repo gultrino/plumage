@@ -37,9 +37,8 @@
 #error "Tcl older than 8.0 is not supported"
 #endif
 
-static PyObject *TclError = NULL;
-static PyObject *TkError = NULL;
 
+static PyObject *TclError, *TkError;
 
 static PyObject *TclPyBridge_call(TclInterpObj *, PyObject *);
 static PyObject *TclPyBridge_eval(TclInterpObj *, PyObject *);
@@ -139,7 +138,7 @@ TclInterp_get_var(TclInterpObj *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s:get_var", &varname))
 		return NULL;
 
-	name = PyString_FromString(varname);
+	name = PyUnicode_FromString(varname);
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
@@ -165,7 +164,7 @@ TclInterp_set_var(TclInterpObj *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "sO:set_var", &varname, &varval))
 		return NULL;
 
-	name = PyString_FromString(varname);
+	name = PyUnicode_FromString(varname);
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
@@ -208,7 +207,7 @@ TclInterp_get_arrayvar(TclInterpObj *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "sO:get_arrayvar", &varname, &element))
 		return NULL;
 
-	name = PyString_FromString(varname);
+	name = PyUnicode_FromString(varname);
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
@@ -235,7 +234,7 @@ TclInterp_set_arrayvar(TclInterpObj *self, PyObject *args)
 				&varname, &element, &varval))
 		return NULL;
 
-	name = PyString_FromString(varname);
+	name = PyUnicode_FromString(varname);
 	tclvar = PyObj_ToTcl(name);
 	Py_DECREF(name);
 
@@ -648,7 +647,7 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 		 * a 'no' string that will be considered as False in Tcl (and that
 		 * is what we are checking here). */
 		PyObject *o = PyObject_Str(tclbool);
-		if (Tcl_GetBoolean(self->interp, PyString_AsString(o),
+		if (Tcl_GetBoolean(self->interp, PyUnicode_AS_DATA(o),
 					&boolval) != TCL_OK)
 			PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 		else
@@ -693,7 +692,7 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 	else {
         result = PyTuple_New(listsize);
         for (i = 0; i < listsize; i++)
-            PyTuple_SET_ITEM(result, i, PyString_FromString(elements[i]));
+            PyTuple_SET_ITEM(result, i, PyUnicode_FromString(elements[i]));
 
 		ckfree((char *)elements);
 	}
@@ -740,7 +739,7 @@ static PyMethodDef TclInterp_methods[] = {
 static PyObject *
 TclInterp_geterrcheck(TclInterpObj *self, void *closure)
 {
-	return PyInt_FromLong(self->err_check_interval);
+	return PyLong_FromLong(self->err_check_interval);
 }
 
 int
@@ -754,13 +753,13 @@ TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
 		return -1;
 	}
 
-	if (!PyInt_Check(value)) {
+	if (!PyLong_Check(value)) {
 		PyErr_SetString(PyExc_TypeError,
 				"The err_check_interval attribute value must be an int");
 		return -1;
 	}
 
-	checkval = PyInt_AsLong(value);
+	checkval = PyLong_AsLong(value);
 	if (checkval < 0) {
 		PyErr_SetString(PyExc_TypeError,
 				"The err_check_interval attribute value must not be negative");
@@ -943,13 +942,12 @@ TclInterp_dealloc(TclInterpObj *self)
 {
 	Py_XDECREF(self->bgerr_handler);
 	Tcl_DeleteInterp(self->interp);
-	self->ob_type->tp_free((PyObject *)self);
+	Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 
 static PyTypeObject TclInterpType = {
-	PyObject_HEAD_INIT(NULL)
-	0,										/* ob_size */
+	PyVarObject_HEAD_INIT(0, 0)
 	"plumage.Interp",						/* tp_name */
 	sizeof(TclInterpObj),					/* tp_basicsize */
 	0,										/* tp_itemsize */
@@ -994,23 +992,35 @@ static PyMethodDef module_methods[] = {
 };
 
 
+static struct PyModuleDef plumage_module = {
+	PyModuleDef_HEAD_INIT,		/* m_base */
+	"plumage",					/* m_name */
+	NULL,						/* m_doc */
+	-1,							/* m_size */
+	module_methods,				/* m_methods */
+	NULL,						/* m_reload */
+	NULL,						/* m_traverse */
+	NULL,						/* m_clear */
+	NULL						/* m_free */
+};
+
 #define AddStringConst(value) PyModule_AddStringConstant(m, #value, value)
 
 #define AddIntConst(value) PyModule_AddIntConstant(m, #value, value)
 
 PyMODINIT_FUNC
-initplumage(void)
+PyInit_plumage(void)
 {
-	PyObject *m;
+	PyObject *m, *pname, *e_pname;
 
-	if ((m = Py_InitModule("plumage", module_methods)) == NULL)
-		return;
+	if (!(m = PyModule_Create(&plumage_module)))
+		return NULL;
 
 	/* exceptions */
 	if (!(TclError = PyErr_NewException("plumage.TclError", NULL, NULL)))
-		return;
+		goto error;
 	if (!(TkError = PyErr_NewException("plumage.TkError", TclError, NULL)))
-		return;
+		goto error;
 	Py_INCREF(TclError);
 	Py_INCREF(TkError);
 	PyModule_AddObject(m, "TclError", TclError);
@@ -1018,7 +1028,7 @@ initplumage(void)
 
 	/* types */
 	if (PyType_Ready(&TclInterpType) == -1)
-		return;
+		goto error;
 	Py_INCREF(&TclInterpType);
 	PyModule_AddObject(m, "Interp", (PyObject *)&TclInterpType);
 
@@ -1054,8 +1064,23 @@ initplumage(void)
 	 * the first call, and the encodings may be changed on first or second
 	 * call.
 	 */
-	Tcl_FindExecutable(Py_GetProgramName());
+	pname = PyUnicode_FromWideChar(Py_GetProgramName(), -1);
+	if (pname) {
+		e_pname = PyUnicode_AsEncodedString(pname,
+				Py_FileSystemDefaultEncoding, NULL);
+		if (e_pname) {
+			Tcl_FindExecutable(PyBytes_AsString(e_pname));
+			Py_DECREF(e_pname);
+		}
+		Py_DECREF(pname);
+	}
 
 	if (PyErr_Occurred())
-		return;
+		goto error;
+
+	return m;
+
+error:
+	Py_DECREF(m);
+	return NULL;
 }

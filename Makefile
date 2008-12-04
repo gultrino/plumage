@@ -1,9 +1,9 @@
-PYTHON=python
+PYTHON=/home/gpolo/python-dev/py3k/python
 INSTALL_DIR=.
-TCL_BASE_DIR=/usr/share/tcltk/tcl8.5
-TK_BASE_DIR=/usr/share/tcltk/tk8.5
-TCL_CONFIG_DIR=$(TCL_BASE_DIR)#/lib
-TK_CONFIG_DIR=$(TK_BASE_DIR)#/lib
+TCL_BASE_DIR=/home/gpolo/tcl/tclbuild#/usr/share/tcltk/tcl8.5
+TK_BASE_DIR=$(TCL_BASE_DIR)#/usr/share/tcltk/tk8.5
+TCL_CONFIG_DIR=$(TCL_BASE_DIR)/lib
+TK_CONFIG_DIR=$(TK_BASE_DIR)/lib
 
 TCL_CONFIG=$(TCL_CONFIG_DIR)/tclConfig.sh
 TK_CONFIG=$(TK_CONFIG_DIR)/tkConfig.sh

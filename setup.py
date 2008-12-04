@@ -18,19 +18,20 @@ def get_paths(path, prefix):
     bash = subprocess.Popen(['bash'], stdin=subprocess.PIPE,
         stdout=subprocess.PIPE)
 
-    bash.stdin.write("source %s\n" % path)
+    bash.stdin.write(bytes("source %s\n" % path, encoding='utf8'))
     for name in ("%s_LIB_SPEC", "%s_INCLUDE_SPEC"):
-        bash.stdin.write('echo `eval echo $%s`\n' % (name % prefix))
-    result = bash.communicate()[0].strip().split('\n')
+        bash.stdin.write(bytes("echo `eval echo $%s`\n" % (name % prefix),
+            encoding='utf8'))
+    result = bash.communicate()[0].strip().split(b'\n')
 
     if not result[0]:
         raise MissingTclTkConfig("'%s' did not contain a (correct) '%s'" %
             (os.path.dirname(path), "%sConfig.sh" % prefix.lower()))
 
     libs = result[0].split()
-    yield libs[1][2:]
-    yield libs[0][2:]
-    yield result[1][2:]
+    yield libs[1][2:].decode('utf8')
+    yield libs[0][2:].decode('utf8')
+    yield result[1][2:].decode('utf8')
 
 def get_tcltk_paths():
     tclconfig = os.environ.get('TCL_CONFIG')
