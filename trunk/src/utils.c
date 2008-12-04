@@ -87,25 +87,18 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 		pyobj = PyFloat_FromDouble(obj->internalRep.doubleValue);
 
 	else if (obj->typePtr == self->ListType) {
-		Py_ssize_t length, i;
-		Tcl_Obj *value;
+		int length, i;
+		Tcl_Obj **objv;
 		PyObject *item;
 
-		Tcl_ListObjLength(self->interp, obj, &length);
+		Tcl_ListObjGetElements(NULL, obj, &length, &objv);
 
 		pyobj = PyTuple_New(length);
 		if (pyobj == NULL)
 			return PyErr_NoMemory();
 
 		for (i = 0; i < length; i++) {
-			if (Tcl_ListObjIndex(self->interp, obj, i, &value) != TCL_OK) {
-				goto exception;
-			} else if (value == NULL) {
-				/* index out of range (how ?) */
-				break;
-			}
-
-			if ((item = TclObj_ToPy(self, value)) == NULL)
+			if ((item = TclObj_ToPy(self, objv[i])) == NULL)
 				goto exception;
 			PyTuple_SET_ITEM(pyobj, i, item);
 		}
@@ -118,20 +111,19 @@ TclObj_ToPy(TclInterpObj *self, Tcl_Obj *obj)
 			return PyErr_NoMemory();
 
 		Tcl_DictSearch search;
-		Tcl_Obj *key, *value;
+		Tcl_Obj *key, *val;
 		PyObject *pykey, *pyval;
 		int done;
 
-		if (Tcl_DictObjFirst(self->interp, obj, &search, &key,
-					&value, &done) != TCL_OK) {
+		if (Tcl_DictObjFirst(NULL, obj, &search, &key, &val, &done) != TCL_OK)
 			goto exception;
-		}
-		for ( ; !done; Tcl_DictObjNext(&search, &key, &value, &done)) {
+
+		for (; !done; Tcl_DictObjNext(&search, &key, &val, &done)) {
 			if ((pykey = TclObj_ToPy(self, key)) == NULL)
 				goto exception;
-			if ((pyval = TclObj_ToPy(self, value)) == NULL) {
+			if ((pyval = TclObj_ToPy(self, val)) == NULL)
 				goto exception;
-			}
+
 			if (PyDict_SetItem(pyobj, pykey, pyval) == -1)
 				goto exception;
 		}
@@ -210,6 +202,7 @@ PyObj_ToTcl(PyObject *obj)
 		PyObject *temp;
 
 		CheckInfRecursion("sequence has infinite recursion");
+		/* 'i' has been set by CheckInfRecursion */
 		if (i != 0) {
 			ckfree((char *)objv);
 			return NULL;
@@ -238,7 +231,7 @@ PyObj_ToTcl(PyObject *obj)
 		Py_ssize_t i, pos = 0;
 
 		CheckInfRecursion("dict has infinite recursion");
-		/* i has been set by CheckInfRecursion */
+		/* 'i' has been set by CheckInfRecursion */
 		if (i != 0)
 			return NULL;
 
