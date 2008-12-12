@@ -55,7 +55,7 @@ struct QueuedEvent {
 };
 
 #define CreateEventProc(name, proc)										\
-	int	name(Tcl_Event *event, int flags)								\
+	static int name(Tcl_Event *event, int flags)						\
 	{																	\
 		struct QueuedEvent *queue_evt = (struct QueuedEvent *)event;	\
 		proc(queue_evt->self, queue_evt->args);							\
@@ -311,6 +311,7 @@ TclPyBridge_loadtk(TclInterpObj *self, PyObject *discard)
 	Py_RETURN_NONE;
 }
 
+
 static PyObject *
 TclPyBridge_call(TclInterpObj *self, PyObject *args)
 {
@@ -392,7 +393,7 @@ finish:
 
 
 
-int
+static int
 TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 		CONST char *argv[])
 {
@@ -431,7 +432,7 @@ struct TclPyBridge {
 	TclInterpObj *pytcl;
 };
 
-int
+static int
 TclPyBridge_proc(ClientData clientdata, Tcl_Interp *interp, int objc,
 		Tcl_Obj *CONST objv[])
 {
@@ -486,7 +487,7 @@ error:
 	return TCL_ERROR;
 }
 
-void
+static void
 TclPyBridge_delete(ClientData clientdata)
 {
 	struct TclPyBridge *cdata = clientdata;
@@ -742,7 +743,7 @@ TclInterp_geterrcheck(TclInterpObj *self, void *closure)
 	return PyLong_FromLong(self->err_check_interval);
 }
 
-int
+static int
 TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
 {
 	long checkval;
@@ -810,7 +811,8 @@ static PyGetSetDef TclInterp_getset[] = {
 };
 
 
-void _get_tcltypeobjs(TclInterpObj *self)
+static void
+_get_tcltypeobjs(TclInterpObj *self)
 {
 	self->IntType = Tcl_GetObjType("int");
 	self->ListType = Tcl_GetObjType("list");
@@ -937,7 +939,7 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 	return 0;
 }
 
-void
+static void
 TclInterp_dealloc(TclInterpObj *self)
 {
 	Py_XDECREF(self->bgerr_handler);
