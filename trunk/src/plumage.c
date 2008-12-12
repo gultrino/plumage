@@ -656,7 +656,7 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 			result = PyBool_FromLong(boolval);
 		Py_DECREF(o);
 	}
-	else {
+	else if (!pytrue) {
 		result = Py_False;
 		Py_INCREF(Py_False);
 	}
