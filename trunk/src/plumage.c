@@ -664,14 +664,19 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 	return result;
 }
 
+PyDoc_STRVAR(getboolean_doc,
+		"getboolean(obj) -> True/False\n\n"
+		"Receives a single argument and returns either True or False\n"
+		"based on how the object is evaluated in Tcl.");
+
 
 static PyObject *
 TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 {
-	PyObject *result = NULL;
-	char *tcllist;
-	const char **elements;
+	PyObject *item, *result = NULL;
+	char *liststr = NULL;
 	int listsize, i;
+	Tcl_Obj *tcllist, **elements;
 
 	/* This method is called with the uncertainty of Tcl returning a string
 	 * or a Tcl list in some cases. If it happens to return a Tcl list then
@@ -685,22 +690,43 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 		result = NULL;
 	}
 
-	//if (!PyArg_ParseTuple(args, "et:splitlist", &tcllist))
-	if (!PyArg_ParseTuple(args, "s:splitlist", &tcllist))
-		return NULL;
+	if (!PyArg_ParseTuple(args, "es#:splitlist", "utf-8", &liststr, &listsize))
+		goto end;
 
-	if (Tcl_SplitList(self->interp, tcllist, &listsize, &elements) != TCL_OK)
+	tcllist = Tcl_NewStringObj(liststr, listsize);
+	PyMem_Free(liststr);
+	if (tcllist == NULL)
+		goto end;
+
+	if (Tcl_ListObjGetElements(self->interp, tcllist, &listsize,
+				&elements) != TCL_OK)
 		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 	else {
-        result = PyTuple_New(listsize);
-        for (i = 0; i < listsize; i++)
-            PyTuple_SET_ITEM(result, i, PyString_FromString(elements[i]));
+		result = PyTuple_New(listsize);
 
-		ckfree((char *)elements);
+		for (i = 0; i < listsize; i++) {
+			if ((item = TclObj_ToPy(self, elements[i])) == NULL)
+				goto exception;
+			PyTuple_SET_ITEM(result, i, item);
+		}
 	}
 
+end:
 	return result;
+
+exception:
+	Py_DECREF(result);
+	return NULL;
 }
+
+PyDoc_STRVAR(splitlist_doc,
+		"splitlist(tcllist) -> tuple\n\n"
+		"splitlist receives a possible Tcl list and returns a Python\n"
+		"tuple.\n"
+		"If tcllist passed is already tuple then it is returned.\n"
+		"Otherwise it is expected to be a string that can be converted\n"
+		"to a Tcl list which will then be converted to a Python tuple.\n");
+
 
 static PyMethodDef TclInterp_methods[] = {
 	/* Calling into Tcl */
@@ -731,8 +757,10 @@ static PyMethodDef TclInterp_methods[] = {
 	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
 
 	/* Utilities */
-	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS, NULL},
-	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS, NULL},
+	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS,
+		getboolean_doc},
+	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS,
+		splitlist_doc},
 
 	{NULL}
 };
@@ -787,7 +815,7 @@ TclInterp_getthreaded(TclInterpObj *self, void *closure)
 }
 
 PyDoc_STRVAR(getthreaded_doc,
-		"Return True if Tcl has thread support, False otherwise");
+		"Return True if Tcl has thread support, False otherwise.");
 
 
 static PyObject *
@@ -797,7 +825,7 @@ TclInterp_gettkloaded(TclInterpObj *self, void *closure)
 }
 
 PyDoc_STRVAR(gettkloaded_doc,
-		"Return True if Tk has been loaded, False otherwise");
+		"Return True if Tk has been loaded, False otherwise.");
 
 
 static PyObject *
@@ -807,7 +835,7 @@ TclInterp_getthreadid(TclInterpObj *self, void *closure)
 	return Py_BuildValue("l", self->tcl_thread_id);
 }
 
-PyDoc_STRVAR(getthreadid_doc, "Return the Tcl thread id");
+PyDoc_STRVAR(getthreadid_doc, "Return the Tcl thread id.");
 
 static PyGetSetDef TclInterp_getset[] = {
 	{"errcheck_interval",
