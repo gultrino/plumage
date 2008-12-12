@@ -772,17 +772,33 @@ TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
 	return 0;
 }
 
+PyDoc_STRVAR(errcheck_doc,
+		"Set/Get error check interval. The interval value must be a\n"
+		"non negative integer.\n\n"
+		"After the specified interval, plumage checks if some error\n"
+		"occurred and then reports it if any. This interval is also\n"
+		"used for unlocking and locking the GIL.");
+
+
 static PyObject *
 TclInterp_getthreaded(TclInterpObj *self, void *closure)
 {
 	return PyBool_FromLong(self->tcl_thread_id != 0);
 }
 
+PyDoc_STRVAR(getthreaded_doc,
+		"Return True if Tcl has thread support, False otherwise");
+
+
 static PyObject *
 TclInterp_gettkloaded(TclInterpObj *self, void *closure)
 {
 	return PyBool_FromLong(self->tk_loaded);
 }
+
+PyDoc_STRVAR(gettkloaded_doc,
+		"Return True if Tk has been loaded, False otherwise");
+
 
 static PyObject *
 TclInterp_getthreadid(TclInterpObj *self, void *closure)
@@ -791,22 +807,24 @@ TclInterp_getthreadid(TclInterpObj *self, void *closure)
 	return Py_BuildValue("l", self->tcl_thread_id);
 }
 
+PyDoc_STRVAR(getthreadid_doc, "Return the Tcl thread id");
+
 static PyGetSetDef TclInterp_getset[] = {
 	{"errcheck_interval",
 		(getter)TclInterp_geterrcheck, (setter)TclInterp_seterrcheck,
-		"Error check interval",
+		errcheck_doc,
 		NULL},
 	{"threaded",
 		(getter)TclInterp_getthreaded, NULL,
-		"Return True if Tcl has thread support, False otherwise",
+		getthreaded_doc,
 		NULL},
 	{"tk_loaded",
 		(getter)TclInterp_gettkloaded, NULL,
-		"Return True if Tk has been loaded, False otherwise",
+		gettkloaded_doc,
 		NULL},
 	{"thread_id",
 		(getter)TclInterp_getthreadid, NULL,
-		"Return the Tcl thread id",
+		getthreadid_doc,
 		NULL},
 	{NULL}
 };
