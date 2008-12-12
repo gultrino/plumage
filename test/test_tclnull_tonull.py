@@ -1,6 +1,6 @@
-import support
 import unittest
 
+import support
 import _tclnull_tonull
 
 tests = (
