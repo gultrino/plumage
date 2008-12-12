@@ -723,7 +723,7 @@ PyDoc_STRVAR(splitlist_doc,
 		"splitlist(tcllist) -> tuple\n\n"
 		"splitlist receives a possible Tcl list and returns a Python\n"
 		"tuple.\n"
-		"If tcllist passed is already tuple then it is returned.\n"
+		"If tcllist is already a tuple then it is returned.\n"
 		"Otherwise it is expected to be a string that can be converted\n"
 		"to a Tcl list which will then be converted to a Python tuple.\n");
 
