@@ -939,8 +939,8 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 		if (TclInterp_loadtk(self) == NULL)
 			return -1;
 		else {
-			/* If TclInterp_loadtk succeeded then there is an extra Py_None
-			 * around since we are not using it. */
+			/* If TclInterp_loadtk succeeded then a Py_None was returned
+			 * but we have no need for it here. */
 			Py_DECREF(Py_None);
 		}
 	}
@@ -1047,11 +1047,11 @@ initplumage(void)
 	AddStringConst(TCL_PATCH_LEVEL);
 	AddStringConst(TK_VERSION);
 	AddStringConst(TK_PATCH_LEVEL);
-	/* FileHandler flags */
+	/* Tcl FileHandler flags */
 	AddIntConst(TCL_READABLE);
 	AddIntConst(TCL_WRITABLE);
 	AddIntConst(TCL_EXCEPTION);
-	/* DoOneEvent flags */
+	/* Tcl DoOneEvent flags */
 	AddIntConst(TCL_WINDOW_EVENTS);
 	AddIntConst(TCL_FILE_EVENTS);
 	AddIntConst(TCL_TIMER_EVENTS);
