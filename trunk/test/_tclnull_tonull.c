@@ -67,7 +67,7 @@ static PyMethodDef test_methods[] = {
 PyMODINIT_FUNC
 init_tclnull_tonull(void)
 {
-	PyObject *m, *plumage;
+	PyObject *m, *args, *plumage;
 
 	m = Py_InitModule("_tclnull_tonull", test_methods);
 	if (m == NULL)
@@ -77,8 +77,12 @@ init_tclnull_tonull(void)
 	if (plumage == NULL)
 		return;
 
+	args = PyTuple_New(1);
+	Py_INCREF(Py_False);
+	PyTuple_SET_ITEM(args, 0, Py_False); /* do not load tk */
 	tclpy = (TclInterpObj *)PyObject_CallObject(
-			PyObject_GetAttrString(plumage, "Interp"), NULL);
+			PyObject_GetAttrString(plumage, "Interp"), args);
+	Py_DECREF(args);
 
 	TestError = PyErr_NewException("_tclnull_tonull.error", NULL, NULL);
 	Py_INCREF(TestError);
