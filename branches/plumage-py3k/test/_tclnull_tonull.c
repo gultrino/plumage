@@ -80,7 +80,7 @@ static struct PyModuleDef _tclnull_to_null = {
 PyMODINIT_FUNC
 PyInit__tclnull_tonull(void)
 {
-	PyObject *m, *plumage, *interp;
+	PyObject *m, *args, *plumage, *interp;
 
 	if (!(m = PyModule_Create(&_tclnull_to_null)))
 		return NULL;
@@ -91,13 +91,18 @@ PyInit__tclnull_tonull(void)
 		return NULL;
 	}
 
+	args = PyTuple_New(1);
+	Py_INCREF(Py_False);
+	PyTuple_SET_ITEM(args, 0, Py_False); /* do not load tk */
 	interp = PyObject_GetAttrString(plumage, "Interp");
 	if (!interp) {
+		Py_DECREF(args);
 		Py_DECREF(m);
 		return NULL;
 	}
-	tclpy = (TclInterpObj *)PyObject_CallObject(interp, NULL);
+	tclpy = (TclInterpObj *)PyObject_CallObject(interp, args);
 	Py_DECREF(interp);
+	Py_DECREF(args);
 	if (!tclpy) {
 		Py_DECREF(m);
 		return NULL;
