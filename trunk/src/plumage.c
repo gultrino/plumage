@@ -396,6 +396,13 @@ finish:
 	return retval;
 }
 
+PyDoc_STRVAR(call_doc, "call(cmdname[, *args]) -> obj\n\n"
+		"Call cmdname with optional args and return the resultant Python\n"
+		"object.\n"
+		"If cmdname is associated to a Python callable and args are given,\n"
+		"then these args will be passed first to the callable object\n"
+		"followed by any args that were given when the cmdname got\n"
+		"associated with the Python callable.");
 
 
 static int
@@ -551,6 +558,12 @@ error:
 	return NULL;
 }
 
+PyDoc_STRVAR(createcommand_doc, "createcommand(cmdname, func[, *args])\n\n"
+		"Associate cmdname with func in Tcl so that when cmdname is invoked\n"
+		"by Tcl, func gets called.\n"
+		"func must be a Python callable. If args are given then they will\n"
+		"be passed as is to the function when it gets called.");
+
 
 static PyObject *
 TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
@@ -566,6 +579,11 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 	} else
 		Py_RETURN_FALSE;
 }
+
+PyDoc_STRVAR(deletecommand_doc, "deletecommand(cmdname) -> bool\n\n"
+		"Remove cmdname from Tcl. If cmdname existed, True is returned\n"
+		"indicating that it is now gone, otherwise False is returned\n"
+		"indicating that no such command existed.");
 
 
 static PyObject *
@@ -682,7 +700,7 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 	return result;
 }
 
-PyDoc_STRVAR(getboolean_doc, "getboolean(obj) -> True/False\n\n"
+PyDoc_STRVAR(getboolean_doc, "getboolean(obj) -> bool\n\n"
 		"Receives a single argument and returns either True or False\n"
 		"based on how the object is evaluated in Tcl.");
 
@@ -746,7 +764,7 @@ PyDoc_STRVAR(splitlist_doc, "splitlist(tcllist) -> tuple\n\n"
 
 static PyMethodDef TclInterp_methods[] = {
 	/* Calling into Tcl */
-	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, NULL},
+	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, call_doc},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
 
 	/* Variables in Tcl */
@@ -760,9 +778,9 @@ static PyMethodDef TclInterp_methods[] = {
 
 	/* Commands in Tcl */
 	{"createcommand", (PyCFunction)TclInterp_createcommand, METH_VARARGS,
-		NULL},
+		createcommand_doc},
 	{"deletecommand", (PyCFunction)TclInterp_deletecommand, METH_VARARGS,
-		NULL},
+		deletecommand_doc},
 
 	/* Events in Tcl */
 	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS,
