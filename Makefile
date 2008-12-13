@@ -20,3 +20,4 @@ build: $(SRC_DIR)/plumage.c $(SRC_DIR)/utils.c $(TEST_DIR)/_tclnull_tonull.c
 clean:
 	rm -rf build
 	rm -rf plumage.so _tclnull_tonull.so
+	find . -path "*.pyc" -delete
