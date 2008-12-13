@@ -60,8 +60,8 @@ def main(args):
                     os.path.join(SRCDIR,  "utils.c")],
                 **tcltk_paths),
             # C test
-            Extension("_tclnull_tonull",
-                [os.path.join(TESTDIR, "_tclnull_tonull.c"),
+            Extension("_utils_bridge",
+                [os.path.join(TESTDIR, "_utils_bridge.c"),
                     os.path.join(SRCDIR, "utils.c")],
                 **c_tcltk_paths),
         ]

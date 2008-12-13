@@ -6,7 +6,7 @@ static PyObject *TestError;
 
 
 static PyObject *
-test_conversion(PyObject *self, PyObject *args)
+test_tclnull_tonull(PyObject *self, PyObject *args)
 {
 	Py_ssize_t uni_size;
 	PyObject *ob, *test;
@@ -16,7 +16,7 @@ test_conversion(PyObject *self, PyObject *args)
 	char *origstr, *expstr;
 	int origlen, explen;
 
-	if (!PyArg_ParseTuple(args, "s#s#:test_conversion", &origstr, &origlen,
+	if (!PyArg_ParseTuple(args, "s#s#:test_tclnull_tonull", &origstr, &origlen,
 				&expstr, &explen))
 		return NULL;
 
@@ -59,17 +59,17 @@ test_conversion(PyObject *self, PyObject *args)
 
 
 static PyMethodDef test_methods[] = {
-	{"test_conversion", test_conversion, METH_VARARGS, NULL},
+	{"test_tclnull_tonull", test_tclnull_tonull, METH_VARARGS, NULL},
 	{NULL},
 };
 
 
 PyMODINIT_FUNC
-init_tclnull_tonull(void)
+init_utils_bridge(void)
 {
 	PyObject *m, *args, *plumage;
 
-	m = Py_InitModule("_tclnull_tonull", test_methods);
+	m = Py_InitModule("_utils_bridge", test_methods);
 	if (m == NULL)
 		return;
 
@@ -84,7 +84,7 @@ init_tclnull_tonull(void)
 			PyObject_GetAttrString(plumage, "Interp"), args);
 	Py_DECREF(args);
 
-	TestError = PyErr_NewException("_tclnull_tonull.error", NULL, NULL);
+	TestError = PyErr_NewException("_utils_bridge.error", NULL, NULL);
 	Py_INCREF(TestError);
 	PyModule_AddObject(m, "error", TestError);
 }
