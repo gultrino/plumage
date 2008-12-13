@@ -3,7 +3,7 @@ import sys
 import plumage
 
 # tests in the following modules do require a running GUI
-REQUIRE_GUI = ()
+REQUIRE_GUI = ["test_loadtk.py"]
 
 def show_tcl_tk():
     tk_ver = plumage.TK_VERSION

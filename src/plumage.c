@@ -120,6 +120,10 @@ TclInterp_loadtk(TclInterpObj *self)
 	ScheduleIfNeeded(TclPyBridge_loadtk, NULL, TclPyEvent_loadtk);
 }
 
+PyDoc_STRVAR(loadtk_doc, "loadtk()\n\n"
+		"Load Tk for this interpreter, if it is already loaded nothing\n"
+		"is done");
+
 
 #define PLUMAGE_VAR_FLAGS TCL_GLOBAL_ONLY | TCL_LEAVE_ERR_MSG
 
@@ -302,8 +306,10 @@ TclPyBridge_loadtk(TclInterpObj *self, PyObject *discard)
 {
 	RetryIfNeeded(NULL, TclPyEvent_loadtk);
 
-	if (!self->tk_loaded && (Tk_Init(self->interp) == TCL_ERROR)) {
+	if (!self->tk_loaded && (Tk_Init(self->interp) != TCL_OK)) {
+		PyGILState_STATE gstate = PyGILState_Ensure();
 		PyErr_SetString(TkError, Tcl_GetStringResult(self->interp));
+		PyGILState_Release(gstate);
 		return NULL;
 	}
 
@@ -391,6 +397,13 @@ finish:
 	return retval;
 }
 
+PyDoc_STRVAR(call_doc, "call(cmdname[, *args]) -> obj\n\n"
+		"Call cmdname with optional args and return the resultant Python\n"
+		"object.\n"
+		"If cmdname is associated to a Python callable and args are given,\n"
+		"then these args will be passed first to the callable object\n"
+		"followed by any args that were given when the cmdname got\n"
+		"associated with the Python callable.");
 
 
 static int
@@ -546,6 +559,12 @@ error:
 	return NULL;
 }
 
+PyDoc_STRVAR(createcommand_doc, "createcommand(cmdname, func[, *args])\n\n"
+		"Associate cmdname with func in Tcl so that when cmdname is invoked\n"
+		"by Tcl, func gets called.\n"
+		"func must be a Python callable. If args are given then they will\n"
+		"be passed as is to the function when it gets called.");
+
 
 static PyObject *
 TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
@@ -562,6 +581,11 @@ TclInterp_deletecommand(TclInterpObj *self, PyObject *args)
 		Py_RETURN_FALSE;
 }
 
+PyDoc_STRVAR(deletecommand_doc, "deletecommand(cmdname) -> bool\n\n"
+		"Remove cmdname from Tcl. If cmdname existed, True is returned\n"
+		"indicating that it is now gone, otherwise False is returned\n"
+		"indicating that no such command existed.");
+
 
 static PyObject *
 TclInterp_do_one_event(PyObject *self, PyObject *args)
@@ -575,8 +599,19 @@ TclInterp_do_one_event(PyObject *self, PyObject *args)
 	result = Tcl_DoOneEvent(flags);
 	Py_END_ALLOW_THREADS
 
+	if (PyErr_Occurred())
+		return NULL;
+
 	return Py_BuildValue("i", result);
 }
+
+PyDoc_STRVAR(do_one_event_doc, "do_one_event([flags]) -> int\n\n"
+		"Call Tcl_DoOneEvent once with flags.\n"
+		"flags may be an OR-ed combination of the following: \n"
+		"TCL_WINDOW_EVENTS, TCL_FILE_EVENTS, TCL_TIMER_EVENTS,\n"
+		"TCL_IDLE_EVENTS, TCL_ALL_EVENTS, TCL_DONT_WAIT.\n"
+		"If flags are not given, TCL_ALL_EVENTS is assumed.");
+
 
 static void
 mainloop_check_signal(ClientData clientdata)
@@ -624,6 +659,9 @@ TclInterp_mainloop(TclInterpObj *self)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(mainloop_doc, "mainloop()\n\n"
+		"Start dispatching scheduled events for this interpreter.");
+
 
 static PyObject *
 TclInterp_quit(TclInterpObj *self)
@@ -631,6 +669,9 @@ TclInterp_quit(TclInterpObj *self)
 	self->running = 0;
 	Py_RETURN_NONE;
 }
+
+PyDoc_STRVAR(quit_doc, "quit()\n\n"
+		"Stop a running mainloop for this interpreter as soon as possible.");
 
 
 static PyObject *
@@ -647,15 +688,17 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 		/* tclbool is considered as True by Python, but maybe this contains
 		 * a 'no' string that will be considered as False in Tcl (and that
 		 * is what we are checking here). */
-		PyObject *o = PyObject_Str(tclbool);
-		if (Tcl_GetBoolean(self->interp, PyUnicode_AS_DATA(o),
+		PyObject *temp = PyObject_Str(tclbool);
+		PyObject *utf8str = PyUnicode_AsUTF8String(temp);
+		Py_DECREF(temp);
+		if (Tcl_GetBoolean(self->interp, PyBytes_AS_STRING(utf8str),
 					&boolval) != TCL_OK)
 			PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 		else
 			result = PyBool_FromLong(boolval);
-		Py_DECREF(o);
+		Py_DECREF(utf8str);
 	}
-	else {
+	else if (!pytrue) {
 		result = Py_False;
 		Py_INCREF(Py_False);
 	}
@@ -663,14 +706,18 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 	return result;
 }
 
+PyDoc_STRVAR(getboolean_doc, "getboolean(obj) -> bool\n\n"
+		"Receives a single argument and returns either True or False\n"
+		"based on how the object is evaluated in Tcl.");
+
 
 static PyObject *
 TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 {
-	PyObject *result = NULL;
-	char *tcllist;
-	const char **elements;
+	PyObject *item, *result = NULL;
+	char *liststr = NULL;
 	int listsize, i;
+	Tcl_Obj *tcllist, **elements;
 
 	/* This method is called with the uncertainty of Tcl returning a string
 	 * or a Tcl list in some cases. If it happens to return a Tcl list then
@@ -684,26 +731,46 @@ TclInterp_splitlist(TclInterpObj *self, PyObject *args)
 		result = NULL;
 	}
 
-	//if (!PyArg_ParseTuple(args, "et:splitlist", &tcllist))
-	if (!PyArg_ParseTuple(args, "s:splitlist", &tcllist))
-		return NULL;
+	if (!PyArg_ParseTuple(args, "es#:splitlist", "utf-8", &liststr, &listsize))
+		goto end;
 
-	if (Tcl_SplitList(self->interp, tcllist, &listsize, &elements) != TCL_OK)
+	tcllist = Tcl_NewStringObj(liststr, listsize);
+	PyMem_Free(liststr);
+	if (tcllist == NULL)
+		goto end;
+
+	if (Tcl_ListObjGetElements(self->interp, tcllist, &listsize,
+				&elements) != TCL_OK)
 		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
 	else {
-        result = PyTuple_New(listsize);
-        for (i = 0; i < listsize; i++)
-            PyTuple_SET_ITEM(result, i, PyUnicode_FromString(elements[i]));
+		result = PyTuple_New(listsize);
 
-		ckfree((char *)elements);
+		for (i = 0; i < listsize; i++) {
+			if ((item = TclObj_ToPy(self, elements[i])) == NULL)
+				goto exception;
+			PyTuple_SET_ITEM(result, i, item);
+		}
 	}
 
+end:
 	return result;
+
+exception:
+	Py_DECREF(result);
+	return NULL;
 }
+
+PyDoc_STRVAR(splitlist_doc, "splitlist(tcllist) -> tuple\n\n"
+		"splitlist receives a possible Tcl list and returns a Python\n"
+		"tuple.\n"
+		"If tcllist is already a tuple then it is returned.\n"
+		"Otherwise it is expected to be a string that can be converted\n"
+		"to a Tcl list which will then be converted to a Python tuple.\n");
+
 
 static PyMethodDef TclInterp_methods[] = {
 	/* Calling into Tcl */
-	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, NULL},
+	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, call_doc},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
 
 	/* Variables in Tcl */
@@ -717,21 +784,24 @@ static PyMethodDef TclInterp_methods[] = {
 
 	/* Commands in Tcl */
 	{"createcommand", (PyCFunction)TclInterp_createcommand, METH_VARARGS,
-		NULL},
+		createcommand_doc},
 	{"deletecommand", (PyCFunction)TclInterp_deletecommand, METH_VARARGS,
-		NULL},
+		deletecommand_doc},
 
 	/* Events in Tcl */
-	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS, NULL},
-	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, NULL},
-	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, NULL},
+	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS,
+		do_one_event_doc},
+	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, mainloop_doc},
+	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, quit_doc},
 
 	/* Tk specific */
-	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
+	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, loadtk_doc},
 
 	/* Utilities */
-	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS, NULL},
-	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS, NULL},
+	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS,
+		getboolean_doc},
+	{"splitlist", (PyCFunction)TclInterp_splitlist, METH_VARARGS,
+		splitlist_doc},
 
 	{NULL}
 };
@@ -771,17 +841,33 @@ TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
 	return 0;
 }
 
+PyDoc_STRVAR(errcheck_doc,
+		"Set/Get error check interval. The interval value must be a\n"
+		"non negative integer.\n\n"
+		"After the specified interval, plumage checks if some error\n"
+		"occurred and then reports it if any. This interval is also\n"
+		"used for unlocking and locking the GIL.");
+
+
 static PyObject *
 TclInterp_getthreaded(TclInterpObj *self, void *closure)
 {
 	return PyBool_FromLong(self->tcl_thread_id != 0);
 }
 
+PyDoc_STRVAR(getthreaded_doc,
+		"Return True if Tcl has thread support, False otherwise.");
+
+
 static PyObject *
 TclInterp_gettkloaded(TclInterpObj *self, void *closure)
 {
 	return PyBool_FromLong(self->tk_loaded);
 }
+
+PyDoc_STRVAR(gettkloaded_doc,
+		"Return True if Tk has been loaded, False otherwise.");
+
 
 static PyObject *
 TclInterp_getthreadid(TclInterpObj *self, void *closure)
@@ -790,22 +876,24 @@ TclInterp_getthreadid(TclInterpObj *self, void *closure)
 	return Py_BuildValue("l", self->tcl_thread_id);
 }
 
+PyDoc_STRVAR(getthreadid_doc, "Return the Tcl thread id.");
+
 static PyGetSetDef TclInterp_getset[] = {
 	{"errcheck_interval",
 		(getter)TclInterp_geterrcheck, (setter)TclInterp_seterrcheck,
-		"Error check interval",
+		errcheck_doc,
 		NULL},
 	{"threaded",
 		(getter)TclInterp_getthreaded, NULL,
-		"Return True if Tcl has thread support, False otherwise",
+		getthreaded_doc,
 		NULL},
 	{"tk_loaded",
 		(getter)TclInterp_gettkloaded, NULL,
-		"Return True if Tk has been loaded, False otherwise",
+		gettkloaded_doc,
 		NULL},
 	{"thread_id",
 		(getter)TclInterp_getthreadid, NULL,
-		"Return the Tcl thread id",
+		getthreadid_doc,
 		NULL},
 	{NULL}
 };
@@ -920,8 +1008,8 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 		if (TclInterp_loadtk(self) == NULL)
 			return -1;
 		else {
-			/* If TclInterp_loadtk succeeded then there is an extra Py_None
-			 * around since we are not using it. */
+			/* If TclInterp_loadtk succeeded then a Py_None was returned
+			 * but we have no need for it here. */
 			Py_DECREF(Py_None);
 		}
 	}
@@ -1039,11 +1127,11 @@ PyInit_plumage(void)
 	AddStringConst(TCL_PATCH_LEVEL);
 	AddStringConst(TK_VERSION);
 	AddStringConst(TK_PATCH_LEVEL);
-	/* FileHandler flags */
+	/* Tcl FileHandler flags */
 	AddIntConst(TCL_READABLE);
 	AddIntConst(TCL_WRITABLE);
 	AddIntConst(TCL_EXCEPTION);
-	/* DoOneEvent flags */
+	/* Tcl DoOneEvent flags */
 	AddIntConst(TCL_WINDOW_EVENTS);
 	AddIntConst(TCL_FILE_EVENTS);
 	AddIntConst(TCL_TIMER_EVENTS);
