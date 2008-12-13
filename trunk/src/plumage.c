@@ -307,8 +307,10 @@ TclPyBridge_loadtk(TclInterpObj *self, PyObject *discard)
 {
 	RetryIfNeeded(NULL, TclPyEvent_loadtk);
 
-	if (!self->tk_loaded && (Tk_Init(self->interp) == TCL_ERROR)) {
+	if (!self->tk_loaded && (Tk_Init(self->interp) != TCL_OK)) {
+		PyGILState_STATE gstate = PyGILState_Ensure();
 		PyErr_SetString(TkError, Tcl_GetStringResult(self->interp));
+		PyGILState_Release(gstate);
 		return NULL;
 	}
 
@@ -597,6 +599,9 @@ TclInterp_do_one_event(PyObject *self, PyObject *args)
 	Py_BEGIN_ALLOW_THREADS
 	result = Tcl_DoOneEvent(flags);
 	Py_END_ALLOW_THREADS
+
+	if (PyErr_Occurred())
+		return NULL;
 
 	return Py_BuildValue("i", result);
 }
