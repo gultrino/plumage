@@ -19,8 +19,8 @@ class LoadTkTest(unittest.TestCase):
         t.join()
 
         self.interp.do_one_event()
-        if not self.interp.tk_loaded:
-            self.fail("Tk did not load successfully, test failed.")
+        self.failUnless(self.interp.tk_loaded,
+                "Tk did not load successfully, test failed.")
 
 
 def test_main():
