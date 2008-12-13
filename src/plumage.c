@@ -121,6 +121,10 @@ TclInterp_loadtk(TclInterpObj *self)
 	ScheduleIfNeeded(TclPyBridge_loadtk, NULL, TclPyEvent_loadtk);
 }
 
+PyDoc_STRVAR(loadtk_doc, "loadtk()\n\n"
+		"Load Tk for this interpreter, if it is already loaded nothing\n"
+		"is done");
+
 
 #define PLUMAGE_VAR_FLAGS TCL_GLOBAL_ONLY | TCL_LEAVE_ERR_MSG
 
@@ -579,6 +583,14 @@ TclInterp_do_one_event(PyObject *self, PyObject *args)
 	return Py_BuildValue("i", result);
 }
 
+PyDoc_STRVAR(do_one_event_doc, "do_one_event([flags]) -> int\n\n"
+		"Call Tcl_DoOneEvent once with flags.\n"
+		"flags may be an OR-ed combination of the following: \n"
+		"TCL_WINDOW_EVENTS, TCL_FILE_EVENTS, TCL_TIMER_EVENTS,\n"
+		"TCL_IDLE_EVENTS, TCL_ALL_EVENTS, TCL_DONT_WAIT.\n"
+		"If flags are not given, TCL_ALL_EVENTS is assumed.");
+
+
 static void
 mainloop_check_signal(ClientData clientdata)
 {
@@ -625,6 +637,9 @@ TclInterp_mainloop(TclInterpObj *self)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(mainloop_doc, "mainloop()\n\n"
+		"Start dispatching scheduled events for this interpreter.");
+
 
 static PyObject *
 TclInterp_quit(TclInterpObj *self)
@@ -632,6 +647,9 @@ TclInterp_quit(TclInterpObj *self)
 	self->running = 0;
 	Py_RETURN_NONE;
 }
+
+PyDoc_STRVAR(quit_doc, "quit()\n\n"
+		"Stop a running mainloop for this interpreter as soon as possible.");
 
 
 static PyObject *
@@ -664,8 +682,7 @@ TclInterp_getboolean(TclInterpObj *self, PyObject *args)
 	return result;
 }
 
-PyDoc_STRVAR(getboolean_doc,
-		"getboolean(obj) -> True/False\n\n"
+PyDoc_STRVAR(getboolean_doc, "getboolean(obj) -> True/False\n\n"
 		"Receives a single argument and returns either True or False\n"
 		"based on how the object is evaluated in Tcl.");
 
@@ -719,8 +736,7 @@ exception:
 	return NULL;
 }
 
-PyDoc_STRVAR(splitlist_doc,
-		"splitlist(tcllist) -> tuple\n\n"
+PyDoc_STRVAR(splitlist_doc, "splitlist(tcllist) -> tuple\n\n"
 		"splitlist receives a possible Tcl list and returns a Python\n"
 		"tuple.\n"
 		"If tcllist is already a tuple then it is returned.\n"
@@ -749,12 +765,13 @@ static PyMethodDef TclInterp_methods[] = {
 		NULL},
 
 	/* Events in Tcl */
-	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS, NULL},
-	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, NULL},
-	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, NULL},
+	{"do_one_event", (PyCFunction)TclInterp_do_one_event, METH_VARARGS,
+		do_one_event_doc},
+	{"mainloop", (PyCFunction)TclInterp_mainloop, METH_NOARGS, mainloop_doc},
+	{"quit", (PyCFunction)TclInterp_quit, METH_NOARGS, quit_doc},
 
 	/* Tk specific */
-	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, NULL},
+	{"loadtk", (PyCFunction)TclInterp_loadtk, METH_NOARGS, loadtk_doc},
 
 	/* Utilities */
 	{"getboolean", (PyCFunction)TclInterp_getboolean, METH_VARARGS,
