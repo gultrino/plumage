@@ -1,7 +1,7 @@
 import unittest
 
 import support
-import _tclnull_tonull
+import _utils_bridge
 
 tests = (
         (b"\xC0\x80", b"\x00"),
@@ -13,7 +13,8 @@ tests = (
 class ConversionTest(unittest.TestCase):
     def test_conversion(self):
         for test in tests:
-            self.failUnlessEqual(_tclnull_tonull.test_conversion(*test), None)
+            self.failUnlessEqual(_utils_bridge.test_tclnull_tonull(*test),
+                    None)
 
 def test_main():
     support.run(ConversionTest)
