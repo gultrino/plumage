@@ -758,10 +758,6 @@ class Misc:
 
     lift = tkraise
 
-    def colormodel(self, value=None):
-        """Useless. Not implemented in Tk."""
-        return self.tk.call('tk', 'colormodel', self._w, value)
-
     def winfo_atom(self, name, displayof=0):
         """Return integer which represents atom NAME."""
         return getint(self.tk.call('winfo', 'atom',
@@ -2109,7 +2105,6 @@ class Toplevel(BaseWidget, Wm):
         self.protocol("WM_DELETE_WINDOW", self.destroy)
 
 
-# XXX verify availability of all the methods here
 class Button(Widget):
     """Button widget."""
 
@@ -2133,21 +2128,6 @@ class Button(Widget):
             overrelief, state, width
         """
         Widget.__init__(self, master, 'button', kw)
-
-    def tkButtonEnter(self, *dummy):
-        self.tk.call('tkButtonEnter', self._w)
-
-    def tkButtonLeave(self, *dummy):
-        self.tk.call('tkButtonLeave', self._w)
-
-    def tkButtonDown(self, *dummy):
-        self.tk.call('tkButtonDown', self._w)
-
-    def tkButtonUp(self, *dummy):
-        self.tk.call('tkButtonUp', self._w)
-
-    def tkButtonInvoke(self, *dummy):
-        self.tk.call('tkButtonInvoke', self._w)
 
     def flash(self):
         """Flash the button.
@@ -2850,7 +2830,6 @@ class Listbox(Widget):
     itemconfig = itemconfigure
 
 
-# XXX verify if all methods still exist
 class Menu(Widget):
     """Menu widget which allows to display menu bars, pull-down menus
     and pop-up menus."""
@@ -2866,27 +2845,6 @@ class Menu(Widget):
             takefocus, tearoff, tearoffcommand, title, type
         """
         Widget.__init__(self, master, 'menu', kw)
-
-    def tk_mbPost(self):
-        self.tk.call('tk_mbPost', self._w)
-    def tk_mbUnpost(self):
-        self.tk.call('tk_mbUnpost')
-    def tk_traverseToMenu(self, char):
-        self.tk.call('tk_traverseToMenu', self._w, char)
-    def tk_traverseWithinMenu(self, char):
-        self.tk.call('tk_traverseWithinMenu', self._w, char)
-    def tk_getMenuButtons(self):
-        return self.tk.call('tk_getMenuButtons', self._w)
-    def tk_nextMenu(self, count):
-        self.tk.call('tk_nextMenu', count)
-    def tk_nextMenuEntry(self, count):
-        self.tk.call('tk_nextMenuEntry', count)
-    def tk_invokeMenu(self):
-        self.tk.call('tk_invokeMenu', self._w)
-    def tk_firstMenu(self):
-        self.tk.call('tk_firstMenu', self._w)
-    def tk_mbButtonDown(self):
-        self.tk.call('tk_mbButtonDown', self._w)
 
     def tk_popup(self, x, y, entry=""):
         """Post the menu at position X,Y with entry ENTRY."""
@@ -3528,18 +3486,6 @@ class Text(Widget):
         """Return a tuple of (x,y,width,height) which gives the bounding
         box of the visible part of the character at the index in ARGS."""
         return self._getints(self.tk.call(self._w, 'bbox', *args)) or None
-
-    def tk_textSelectTo(self, index):
-        self.tk.call('tk_textSelectTo', self._w, index)
-
-    def tk_textBackspace(self):
-        self.tk.call('tk_textBackspace', self._w)
-
-    def tk_textIndexCloser(self, a, b, c):
-        self.tk.call('tk_textIndexCloser', self._w, a, b, c)
-
-    def tk_textResetAnchor(self, index):
-        self.tk.call('tk_textResetAnchor', self._w, index)
 
     def compare(self, index1, op, index2):
         """Return whether between index INDEX1 and index INDEX2 the
