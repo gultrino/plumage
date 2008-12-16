@@ -3895,10 +3895,12 @@ class OptionMenu(Menubutton):
 
 
 def image_names():
-    return setup_master().tk.call('image', 'names')
+    master = setup_master()
+    return master.tk.splitlist(master.tk.call('image', 'names'))
 
 def image_types():
-    return setup_master().tk.call('image', 'types')
+    master = setup_master()
+    return master.tk.splitlist(master.tk.call('image', 'types'))
 
 class Image(object):
     """Base class for images."""
@@ -3926,13 +3928,10 @@ class Image(object):
         return self.name
 
     def __del__(self):
-        self.tk.call('image', 'delete', self.name)
-        #if self.name:
-            #try:
-            #    self.tk.call('image', 'delete', self.name)
-            #except TclError:
-            #    # May happen if the root was destroyed
-            #    pass
+        try:
+            self.tk.call('image', 'delete', self.name)
+        except TclError:
+            pass
 
     def __setitem__(self, key, value):
         self.tk.call(self.name, 'configure', '-' + key, value)
@@ -4008,9 +4007,10 @@ class PhotoImage(Image):
         self.tk.call(dest_img, 'copy', self.name, *(_tkinter._flatten(args)))
         return dest_img
 
+    # XXX update docstring
     def data(self, background=None, format=None, from_coords=None,
             grayscale=False):
-        """Return image data in the form of a string."""
+        """Return image data."""
         args = ()
         if background:
             args += ('-background', background)
@@ -4019,23 +4019,45 @@ class PhotoImage(Image):
         if from_coords:
             args += ('-from', ) + tuple(from_coords)
         if grayscale:
-            args += ('-grayscale')
+            args += ('-grayscale', )
 
-        return self.tk.call(self.name, 'data', *args)
+        for line in self.tk.splitlist(self.tk.call(self.name, 'data', *args)):
+            yield line.split()
 
     def get(self, x, y):
         """Return the color (red, green, blue) of the pixel at X,Y."""
         return self.tk.call(self.name, 'get', x, y)
 
     def put(self, data, format=None, to=None):
-        """Put row formated colors to image starting from
-        position TO, e.g. image.put("{red green} {blue yellow}", to=(4,6))"""
+        """Set pixels in the image according to the data specified.
+
+        The argument 'to' accepts either a tuple with two coordinates or
+        four coordinates. x1, y1 specifies the coordinates of the top-left
+        corner of the image's region into which data is to be put.
+        The default is (0,0). If x2, y2 are given and data is not large
+        enough to cover the rectangle specified, the image will be tiled so
+        it covers the entire destination rectangle.
+
+        If the data is to be specified as a list of lists of pixels, then
+        use the method put_pixels, to fill a region with a single color use
+        put_fill.
+        """
         args = ()
         if format:
             args += ('-format', format)
         if to:
             args += ('-to', ) + tuple(to)
         self.tk.call(self.name, 'put', data, *args)
+
+    def put_pixels(self, data, format=None, to=None):
+        """Put pixels described by data into the current image."""
+        # format data as something that can be represented by Tcl as lists
+        tcl_list = ' '.join("{%s}" % ' '.join(line) for line in data)
+        self.put(tcl_list, format, to)
+
+    def put_fill(self, color, format=None, region=None):
+        """Fill a specified region with color."""
+        self.put(color, format, region)
 
     # XXX read into this image or follow the copy method ?
     def read(self, filename, format=None, from_coords=None, shrink=None,
@@ -4051,7 +4073,7 @@ class PhotoImage(Image):
         if from_coords is not None:
             args += ('-from', from_coords)
         if shrink is not None:
-            args += ('-shrink')
+            args += ('-shrink', )
         if to is not None:
             args += ('-to', to)
 
@@ -4089,7 +4111,7 @@ class PhotoImage(Image):
         if from_coords:
             args += ('-from',) + tuple(from_coords)
         if grayscale:
-            args += ('-grayscale')
+            args += ('-grayscale', )
 
         self.tk.call(self.name, 'write', filename, *args)
 
