@@ -2053,7 +2053,7 @@ class BaseWidget(object, Misc):
 
     def destroy(self):
         """Destroy this and all descendants widgets."""
-        for c in self.children.itervalues():
+        for c in self.children.values():
             c.destroy()
         self.tk.call('destroy', self._w)
         if self._name in self.master.children:
