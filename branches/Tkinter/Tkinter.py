@@ -137,6 +137,7 @@ def setup_master(master=None):
                 "configured to not support default root")
     return master
 
+
 class Event(object):
     """Container for the properties of an event.
 
@@ -184,6 +185,7 @@ class Event(object):
     widget      - widget in which the event occurred
     delta       - delta of wheel movement (MouseWheel)
     """
+
 
 class Variable(object):
     """Class to define value holders for e.g. buttons.
@@ -1529,7 +1531,7 @@ class Grid:
 
     def grid_configure(self, query_opt=None, **kw):
         """Position a widget in the parent widget in a grid.
-        
+
         Use as options:
         column=number - use cell identified with given column (starting with 0)
         columnspan=number - this widget will span several columns
@@ -1839,8 +1841,8 @@ class Wm:
 
     def wm_positionfrom(self, who=None):
         """Instruct the window manager that the position of this widget shall
-        be defined by the user if WHO is "user", and by its own policy if WHO is
-        "program"."""
+        be defined by the user if WHO is "user", and by its own policy if
+        WHO is "program"."""
         return self.tk.call('wm', 'positionfrom', self._w, who)
 
     positionfrom = wm_positionfrom
@@ -1866,8 +1868,8 @@ class Wm:
 
     def wm_sizefrom(self, who=None):
         """Instruct the window manager that the size of this widget shall
-        be defined by the user if WHO is "user", and by its own policy if WHO is
-        "program"."""
+        be defined by the user if WHO is "user", and by its own policy if
+        WHO is "program"."""
         return self.tk.call('wm', 'sizefrom', self._w, who)
 
     sizefrom = wm_sizefrom
@@ -1910,7 +1912,7 @@ class Tk(object, Misc, Wm):
     def __init__(self, screenName=None, baseName=None, className='Tk',
             useTk=1, sync=0, use=0):
         """Return a new Toplevel widget on the given screenName.
-        
+
         A new Tcl interpreter will be created. baseName will be used for the
         identification of the profile file (see readprofile).
         It is constructed from sys.argv[0] without extensions if None is
@@ -2838,7 +2840,7 @@ class Menu(Widget):
         """Construct menu widget with the parent master.
 
         WIDGET-SPECIFIC OPTIONS
-        
+
             activebackground, activeborderwidth, activeforeground,
             background, bd, bg, borderwidth, cursor, disabledforeground,
             fg, font, foreground, postcommand, relief, selectcolor,
@@ -2968,7 +2970,7 @@ class Menubutton(Widget):
 # XXX really obsolete ?
 class Message(Widget):
     """Message widget to display multiline text.
-    
+
     Obsolete since Label does it too."""
 
     def __init__(self, master=None, **kw):
@@ -3975,7 +3977,7 @@ class PhotoImage(Image):
         """Create an image with the given name.
 
         WIDGET-SPECIFIC OPTIONS
-        
+
             data, format, file, gamma, height, palette, width.
         """
         super(PhotoImage, self).__init__('photo', name, master, **kw)
@@ -4106,20 +4108,20 @@ class BitmapImage(Image):
 
 
 
-def _test():
+def test():
     root = Tk()
     text = "This is Tcl/Tk version %s" % TclVersion
     if TclVersion >= 8.1:
         try:
             text = text + unicode("\nThis should be a cedilla: \347",
-                                  "iso-8859-1")
+                    "iso-8859-1")
         except NameError:
             pass # no unicode support
     label = Label(root, text=text)
     label.pack()
     test = Button(root, text="Click me!",
-              command=lambda root=root: root.test.configure(
-                  text="[%s]" % root.test['text']))
+            command=lambda root=root: root.test.configure(
+                text="[%s]" % root.test['text']))
     test.pack()
     root.test = test
     quit = Button(root, text="QUIT", command=root.destroy)
@@ -4132,4 +4134,4 @@ def _test():
     root.mainloop()
 
 if __name__ == '__main__':
-    _test()
+    test()
