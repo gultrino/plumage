@@ -2087,18 +2087,6 @@ class Toplevel(BaseWidget, Wm):
             background, class, colormap, container, height, menu, screen,
             use, visual, width
         """
-        extra = ()
-        # XXX some keys are missing here, but let me check BaseWidget to
-        # understand if 'extra' is really needed here.
-        #for wmkey in ('screen', 'class_', 'class', 'visual', 'colormap'):
-        #    if wmkey in kw:
-        #        val = cnf[wmkey]
-        #        # needed because some keys are not valid as keyword arguments
-        #        if wmkey[-1] == '_':
-        #            wmkey = wmkey[:-1]
-        #        extra += ('-' + wmkey, val)
-        #        #del kw[wmkey]
-
         BaseWidget.__init__(self, master, 'toplevel', kw)
 
         root = self._root()
