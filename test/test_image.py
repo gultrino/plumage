@@ -44,6 +44,11 @@ class PhotoImageTest(unittest.TestCase):
                 (['#ff0000', '#0000ff', '#00ff00'],
                     ['#00ff00', '#ff0000', '#0000ff']))
 
+    def test_transparency(self):
+        img = Tkinter.PhotoImage(file=support.sample_img("test1.gif"))
+        boolval = img.transparency_get(0, 0)
+        img.transparency_set(0, 0)
+        self.failUnlessEqual(img.transparency_get(0, 0), not boolval)
 
 
 class BitmapImageTest(unittest.TestCase):
