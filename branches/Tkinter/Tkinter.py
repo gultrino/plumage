@@ -1227,7 +1227,6 @@ class Misc:
                 except TclError:
                     # received an unrecognized option for this widget, ignore
                     # the error for now
-                    print "SKIPPING OPTION", k
                     pass
                 else:
                     # delete command if any, then add one
