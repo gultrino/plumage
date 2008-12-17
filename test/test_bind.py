@@ -72,38 +72,73 @@ class BindTest(unittest.TestCase):
 
     def test_bind_all(self):
         btn = self.btn
-        activated = [False, False]
+        activated = []
 
-        cb = lambda event: activated.pop()
+        cb = lambda event: activated.remove(event.widget)
 
-        btn2 = Tkinter.Button()
-        f1 = btn2.bind('<1>', cb)
-        f2 = btn.bind('<1>', cb)
+        lbl = Tkinter.Label()
 
-        btn2.pack()
+        lbl.pack()
         btn.pack()
-        btn2.wait_visibility()
+        lbl.wait_visibility()
         btn.wait_visibility()
 
-        btn.bind_all("<1>", cb)
+        activated.extend([lbl, btn])
+        btn.master.bind_all("<1>", cb)
 
         support.simulate_mouse_click(btn, 0, 0)
+        support.simulate_mouse_click(lbl, 0, 0)
         self.failIf(activated)
+
+        btn.unbind_all("<1>") # cleanup
 
     def test_unbind_all(self):
         self.btn.bind_all("<1>", lambda event: None)
         self.btn.bind_all("<1>", lambda event: None, add=True)
         self.failUnlessEqual(len(self.btn.bind_all("<1>")), 2)
-        curr_cmds = self.btn._tclCommands
+        amount_cmds = len(self.btn._root()._tclCommands)
         names = self.btn.bind_all("<1>")
         self.btn.unbind_all("<1>")
-        self.failIf(curr_cmds)
+        self.failIf(amount_cmds - len(self.btn._root()._tclCommands) != 2)
         for name in names:
             self.failIf(self.btn.tk.call("info", "commands", name))
 
-    def test_bind_class(self): pass
+    def test_bind_class(self):
+        btn = self.btn
+        activated = []
 
-    def test_unbind_class(self): pass
+        def test(event):
+            activated.remove(event.widget)
+
+        lbl = Tkinter.Label()
+        btn2 = Tkinter.Button()
+        lbl.pack()
+        btn2.pack()
+        btn.pack()
+        lbl.wait_visibility()
+        btn2.wait_visibility()
+        btn.wait_visibility()
+
+        activated.extend([btn2, lbl, btn])
+        btn.master.bind_class("Button", "<1>", test)
+
+        support.simulate_mouse_click(btn2, 0, 0)
+        support.simulate_mouse_click(btn, 0, 0)
+        support.simulate_mouse_click(lbl, 0, 0)
+        self.failUnlessEqual(activated, [lbl])
+
+        btn.master.unbind_class("Button", "<1>") # cleanup
+
+    def test_unbind_class(self):
+        self.btn.bind_class("Label", "<1>", lambda event: None)
+        self.btn.bind_class("Label", "<1>", lambda event: None, add=True)
+        self.failUnlessEqual(len(self.btn.bind_class("Label", "<1>")), 2)
+        amount_cmds = len(self.btn._root()._tclCommands)
+        names = self.btn.bind_class("Label", "<1>")
+        self.btn.unbind_class("Label", "<1>")
+        self.failIf(amount_cmds - len(self.btn._root()._tclCommands) != 2)
+        for name in names:
+            self.failIf(self.btn.tk.call("info", "commands", name))
 
 
 def test_main():

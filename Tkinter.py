@@ -1168,7 +1168,10 @@ class Misc:
     def unbind_class(self, className, sequence):
         """Unbind for a all widgets with bindtag CLASSNAME for event SEQUENCE
         all functions."""
+        names = self.bind_class(className, sequence)
         self.tk.call('bind', className , sequence, '')
+        for cmd in names:
+            self._root()._deletecommand(cmd)
 
     def mainloop(self):
         """Call the mainloop of Tk."""
