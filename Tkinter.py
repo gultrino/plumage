@@ -229,6 +229,8 @@ class Variable(object):
 
     def __del__(self):
         """Unset the variable in Tcl."""
+        for item in self.trace_vinfo():
+            self.trace_vdelete(*item)
         self._tk.unset_var(self._name)
 
     def __str__(self):
@@ -247,7 +249,8 @@ class Variable(object):
     # Conversion between the older syntax for trace_* and the new one
     _modes = {
             'a': 'array', 'r': 'read', 'w': 'write', 'u': 'unset',
-            'array': 'a', 'read': 'r', 'write': 'w', 'unset': 'u'}
+            'array': 'a', 'read': 'r', 'write': 'w', 'unset': 'u'
+            }
 
     # XXX docstrings not update for the 'a' mode
 
@@ -258,11 +261,26 @@ class Variable(object):
         callback must be a function which is called when the variable is
         read, written or undefined.
 
-        Return the name of the callback. XXX
+        callback must be a callable which accepts three arguments. The
+        first one is the variable name, the second argument is an empty
+        string except when dealing with Tcl array variables which then
+        represents the index in the array variable, the third arguments
+        indicates which mode caused the callback to be invoked.
+
+        The name of the command created in Tcl associated to the callback
+        is returned.
         """
-        lmode = [self._modes[m] for m in mode]
+        # if something in mode isn't in self._modes then the call to trace
+        # will end up raising a TclError, I will let that happen
+        lmode = [self._modes[m] if m in self._modes else m for m in mode]
         cbname = self._master._register(callback)
-        self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
+        try:
+            self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
+        except TclError:
+            # remove the just registered command since the trace call failed
+            self._master._deletecommand(cbname)
+            raise
+
         return cbname
 
     trace = trace_variable
