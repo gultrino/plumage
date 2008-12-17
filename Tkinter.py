@@ -87,15 +87,22 @@ def _dict_from_tcltuple(ttuple):
 
     return retdict
 
-def _val_or_dict(options, func, *args):
+def _val_or_dict(options, func, *args, **kw):
     """Format options then call func with args and options and return
-    the appropriate result.
+    the appropriate result. If something more sofisticated is needed to
+    be done with options, specify a function through opt_formatter that
+    deals with it.
 
     If no option is specified, a dict is returned. If a option is
     specified with the None value, the value for that option is returned.
     Otherwise, the function just sets the passed options and the caller
     shouldn't be expecting a return value anyway."""
-    options = _format_optdict(options)
+    opt_formatter = kw.get('opt_formatter')
+    if opt_formatter is not None:
+        options = opt_formatter(options)
+    else:
+        options = _format_optdict(options)
+
     res = func(*(args + options))
 
     if len(options) % 2: # option specified without a value, return its value
@@ -1364,7 +1371,8 @@ class Misc:
         """Internal function."""
         if query_opt is not None:
             kw[query_opt] = None
-        return _val_or_dict(kw, self.tk.call, self._w, *args)
+        return _val_or_dict(kw, self.tk.call, self._w,
+                opt_formatter=self._options, *args)
 
     def configure(self, query_opt=None, **kw):
         """Configure resources of a widget.
