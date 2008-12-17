@@ -1039,18 +1039,14 @@ class Misc:
         else:
             self.tk.call('bindtags', self._w, tagList)
 
-    # XXX
     def _bind(self, what, sequence, func, add, needcleanup=1):
         """Internal function."""
-        if type(func) is StringType:
+        if isinstance(func, str):
             self.tk.call(what + (sequence, func))
         elif func:
-            funcid = self._register(func, self._substitute,
-                        needcleanup)
+            funcid = self._register(func, self._substitute, needcleanup)
             cmd = ('%sif {"[%s %s]" == "break"} break\n'
-                   %
-                   (add and '+' or '',
-                funcid, self._subst_format_str))
+                    % (add and '+' or '', funcid, self._subst_format_str))
             self.tk.call(what + (sequence, cmd))
             return funcid
         elif sequence:
@@ -1336,9 +1332,8 @@ class Misc:
 
     __getitem__ = cget
 
-    # XXX
     def __setitem__(self, key, value):
-        self.configure({key: value})
+        self.configure(**{key: value})
 
     def __contains__(self, key):
         raise TypeError("Tkinter objects don't support 'in' tests.")
