@@ -25,7 +25,6 @@ class AfterCmdTest(unittest.TestCase):
         self.failUnlessEqual(cmd_len, len(self.root._tclCommands))
 
 
-
 def test_main():
     support.run(AfterCmdTest)
 

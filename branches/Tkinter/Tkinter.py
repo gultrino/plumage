@@ -1211,31 +1211,29 @@ class Misc:
             return ('-displayof', self._w)
         return ()
 
-    # XXX
     def _options(self, kw):
         """Internal function."""
         res = ()
         for k, v in kw.iteritems():
             if v is None:
-                continue # XXX or break ?
+                continue
 
             if k[-1] == '_':
                 k = k[:-1]
             if callable(v):
-                v = self._register(v)
-            # XXX still need all this ?
-            #elif isinstance(v, (tuple, list)):
-            #    nv = []
-            #    for item in v:
-            #        if not isinstance(item, (basestring, int)):
-            #            break
-            #        elif isinstance(item, int):
-            #            nv.append('%d' % item)
-            #        else:
-            #            # format it to proper Tcl code if it contains space
-            #            nv.append(('{%s}' if ' ' in item else '%s') % item)
-            #    else:
-            #        v = ' '.join(nv)
+                # If we are replacing a callback, delete it first
+                try:
+                    cmd = self.cget(k)
+                except TclError:
+                    # received an unrecognized option for this widget, ignore
+                    # the error for now
+                    print "SKIPPING OPTION", k
+                    pass
+                else:
+                    # delete command if any, then add one
+                    if cmd:
+                        self._deletecommand(cmd)
+                    v = self._register(v)
 
             res += ('-' + k, v)
 
