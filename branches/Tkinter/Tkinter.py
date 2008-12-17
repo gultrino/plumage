@@ -1899,14 +1899,23 @@ class Wm:
     positionfrom = wm_positionfrom
 
     def wm_protocol(self, name=None, func=None):
-        """Bind function FUNC to command NAME for this widget.
-        Return the function bound to NAME if None is given. NAME could be
-        e.g. "WM_SAVE_YOURSELF" or "WM_DELETE_WINDOW"."""
+        """Bind/Unbind function FUNC to command NAME for this widget.
+
+        If func is '', the name associated to a previous func, if any,
+        will be removed. Otherwise, if func is a callable, it is will
+        be associated with the given name.
+
+        Return the function bound to NAME if None is given.
+        NAME could be e.g. "WM_SAVE_YOURSELF" or "WM_DELETE_WINDOW"."""
+        if func or func == '':
+            cmd = self.wm_protocol(name)
+            if cmd:
+                self._deletecommand(cmd)
+
         if hasattr(func, '__call__'):
-            command = self._register(func)
-        else:
-            command = func
-        return self.tk.call('wm', 'protocol', self._w, name, command)
+            func = self._register(func)
+
+        return self.tk.call('wm', 'protocol', self._w, name, func)
 
     protocol = wm_protocol
 
