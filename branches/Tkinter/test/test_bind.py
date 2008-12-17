@@ -12,6 +12,33 @@ class BindTest(unittest.TestCase):
     def tearDown(self):
         self.btn.destroy()
 
+    # XXX this may move to another module
+    def test_bind_leak(self):
+        # leak test: not removing a just created command because another call
+        #            to Tcl failed
+        orig_len = len(self.btn._tclCommands)
+        try:
+            self.btn.bind('<hi there>', lambda: None)
+        except Tkinter.TclError:
+            # command should be gone by now
+            pass
+        new_len = len(self.btn._tclCommands)
+
+        self.failIf(new_len != orig_len, "(%d != %d) bind leaked" % (
+            new_len, orig_len))
+
+        # leak test: overwrite registered commnads
+        def test(): pass
+        def test2(): pass
+        self.btn.bind('<1>', test)
+        name = self.btn.bind('<1>')[0]
+        self.btn.bind('<1>', test2)
+        # the command associated to test should no longer exist now
+
+        self.failIf(self.btn.tk.call("info", "commands", name))
+        self.failUnlessEqual(len(self.btn.bind('<1>')), 1)
+        self.failUnless(self.btn.bind('<1>')[0] != name)
+
 
     def test_bind(self):
         activated = []
@@ -28,11 +55,20 @@ class BindTest(unittest.TestCase):
         self.failUnless(isinstance(self.btn.bind(), tuple))
 
     def test_unbind(self):
-        funcid = self.btn.bind('<1>', lambda event: None)
-        self.failUnless(funcid in self.btn._tclCommands)
-        self.btn.unbind('<1>', funcid)
-        self.failIf(funcid in self.btn._tclCommands)
+        self.btn.bind('<1>', lambda: None)
+        self.failUnless(self.btn.bind())
+        self.btn.unbind('<1>')
         self.failIf(self.btn.bind())
+
+        self.btn.bind('<1>', lambda: None)
+        self.btn.bind('<1>', lambda: None, add=True)
+        curr_cmds = self.btn._tclCommands
+        names = self.btn.bind('<1>')
+        self.failUnlessEqual(len(names), 2)
+        self.btn.unbind('<1>')
+        self.failIf(curr_cmds)
+        for name in names:
+            self.failIf(self.btn.tk.call("info", "commands", name))
 
     def test_bind_all(self):
         btn = self.btn
@@ -54,7 +90,16 @@ class BindTest(unittest.TestCase):
         support.simulate_mouse_click(btn, 0, 0)
         self.failIf(activated)
 
-    def test_unbind_all(self): pass
+    def test_unbind_all(self):
+        self.btn.bind_all("<1>", lambda event: None)
+        self.btn.bind_all("<1>", lambda event: None, add=True)
+        self.failUnlessEqual(len(self.btn.bind_all("<1>")), 2)
+        curr_cmds = self.btn._tclCommands
+        names = self.btn.bind_all("<1>")
+        self.btn.unbind_all("<1>")
+        self.failIf(curr_cmds)
+        for name in names:
+            self.failIf(self.btn.tk.call("info", "commands", name))
 
     def test_bind_class(self): pass
 
