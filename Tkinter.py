@@ -2321,22 +2321,15 @@ class Canvas(Widget):
 
     def coords(self, *args):
         """Return a list of coordinates for the item given in ARGS."""
-        # XXX Should use _flatten on args # XXX why ?
         return map(getdouble,
                 self.tk.splitlist(self.tk.call(self._w, 'coords', *args)))
 
-    # XXX
-    def _create(self, itemType, args, kw): # Args: (val, val, ..., cnf={})
+    def _create(self, item_type, coords, options):
         """Internal function."""
-        args = _flatten(args)
-        cnf = args[-1]
-        if type(cnf) in (DictionaryType, TupleType):
-            args = args[:-1]
-        else:
-            cnf = {}
-        return getint(self.tk.call(
-            self._w, 'create', itemType,
-            *(args + self._options(cnf, kw))))
+        coords = _flatten(coords)
+        options = self._options(options)
+        return getint(self.tk.call(self._w, 'create', item_type,
+            *(coords + options)))
 
     def create_arc(self, *args, **kw):
         """Create arc shaped region with coordinates x1,y1,x2,y2."""
