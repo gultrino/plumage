@@ -214,8 +214,7 @@ class Variable(object):
         If NAME matches an existing variable and VALUE is omitted
         then the existing value is retained.
         """
-        if not master:
-            master = _default_root
+        master = setup_master(master)
         self._master = master
         self._tk = master.tk
         if name:
@@ -244,17 +243,26 @@ class Variable(object):
         """Return value of the Tcl variable."""
         return self._tk.get_var(self._name)
 
+
+    # Conversion between the older syntax for trace_* and the new one
+    _modes = {
+            'a': 'array', 'r': 'read', 'w': 'write', 'u': 'unset',
+            'array': 'a', 'read': 'r', 'write': 'w', 'unset': 'u'}
+
+    # XXX docstrings not update for the 'a' mode
+
     def trace_variable(self, mode, callback):
         """Define a trace callback for the variable.
 
-        mode is one of "r", "w", "u" for read, write, undefine.
+        mode is a combination of "r", "w", "u" for read, write, unset.
         callback must be a function which is called when the variable is
         read, written or undefined.
 
         Return the name of the callback. XXX
         """
+        lmode = [self._modes[m] for m in mode]
         cbname = self._master._register(callback)
-        self._tk.call("trace", "variable", self._name, mode, cbname)
+        self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
         return cbname
 
     trace = trace_variable
@@ -262,18 +270,26 @@ class Variable(object):
     def trace_vdelete(self, mode, cbname):
         """Delete the trace callback for a variable.
 
-        mode is one of "r", "w", "u" for read, write, undefine.
+        mode is a combination of "r", "w", "u" for read, write, unset.
         cbname is the name of the callback returned from trace_variable or
         trace.
         """
-        self._tk.call("trace", "vdelete", self._name, mode, cbname)
+        lmode = [self._modes[m] for m in mode]
+        self._tk.call("trace", "remove", "variable", self._name, lmode, cbname)
         self._master._deletecommand(cbname)
 
     def trace_vinfo(self):
         """Return all trace callback information."""
-        # XXX
-        return map(self._tk.split, self._tk.splitlist(
-            self._tk.call("trace", "vinfo", self._name)))
+        result = self._tk.splitlist(
+                self._tk.call("trace", "info", "variable", self._name))
+
+        # format result to the old format
+        r = []
+        for t in result:
+            old_mode = ''.join([self._modes[mode] for mode in t[0]])
+            r.append((old_mode, t[1]))
+
+        return r
 
     # XXX
     def __eq__(self, other):
@@ -400,7 +416,6 @@ class Misc:
         this widget in the Tcl interpreter."""
         if self._tclCommands is not None:
             for name in self._tclCommands:
-                #print '- Tkinter: deleted command', name
                 self.tk.deletecommand(name)
             self._tclCommands = set()
 
