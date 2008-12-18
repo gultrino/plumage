@@ -3308,7 +3308,6 @@ class Scale(Widget):
         """Return a tuple (X,Y) of the point along the centerline of the
         trough that corresponds to VALUE or the current value if None is
         given."""
-
         return self._getints(self.tk.call(self._w, 'coords', value))
 
     def identify(self, x, y):
@@ -3408,7 +3407,7 @@ class Spinbox(Widget):
         bounding box may refer to a region outside the
         visible area of the window.
         """
-        return self.tk.call(self._w, 'bbox', index)
+        return self._getints(self.tk.call(self._w, 'bbox', index)) or None
 
     def delete(self, first, last=None):
         """Delete one or more elements of the spinbox.
@@ -3629,7 +3628,6 @@ class Text(Widget):
 
         edit_modified, edit_redo, edit_reset, edit_separator
         and edit_undo
-
         """
         return self.tk.call(self._w, 'edit', *args)
 
@@ -3655,14 +3653,13 @@ class Text(Widget):
         return self.edit("redo")
 
     def edit_reset(self):
-        """Clears the undo and redo stacks
-        """
+        """Clears the undo and redo stacks"""
         return self.edit("reset")
 
     def edit_separator(self):
         """Inserts a separator (boundary) on the undo stack.
 
-        Does nothing when the undo option is false
+        Does nothing when the undo option is false.
         """
         return self.edit("separator")
 
@@ -3673,7 +3670,7 @@ class Text(Widget):
         as all the insert and delete commands that are recorded
         on the undo stack in between two separators. Generates
         an error when the undo stack is empty. Does nothing
-        when the undo option is false
+        when the undo option is false.
         """
         return self.edit("undo")
 
@@ -3942,12 +3939,12 @@ class OptionMenu(Menubutton):
         if kwargs.has_key('command'):
             del kwargs['command']
         if kwargs:
-            raise TclError, 'unknown option -'+kwargs.keys()[0]
+            raise TclError('unknown option -' + kwargs.keys()[0])
         menu.add_command(label=value,
-                 command=_setit(variable, value, callback))
+                command=_setit(variable, value, callback))
         for v in values:
             menu.add_command(label=v,
-                     command=_setit(variable, v, callback))
+                    command=_setit(variable, v, callback))
         self["menu"] = menu
 
     def __getitem__(self, name):
