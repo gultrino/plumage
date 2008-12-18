@@ -45,6 +45,12 @@ __all__ = ['Tk', 'Tcl', 'Toplevel', 'Button', 'Canvas', 'Checkbutton',
         'Menubutton', 'Message', 'PanedWindow', 'Radiobutton', 'Scale',
         'Scrollbar', 'Spinbox', 'Text', 'OptionMenu', 'Widget',
 
+        # constants
+        'TclVersion', 'TkVersion', 'READABLE', 'WRITABLE', 'EXCEPTION',
+
+        # exceptions
+        'TclError',
+
         # variables
         'Variable', 'StringVar', 'IntVar', 'DoubleVar', 'BooleanVar',
 
@@ -2927,7 +2933,7 @@ class Menu(Widget):
         """Activate entry at INDEX."""
         self.tk.call(self._w, 'activate', index)
 
-    def add(self, item_type, **kw):
+    def add(self, item_type, kw):
         """Internal function."""
         self.tk.call(self._w, 'add', item_type, *self._options(kw))
 
@@ -2951,9 +2957,9 @@ class Menu(Widget):
         """Add separator."""
         self.add('separator', kw)
 
-    def insert(self, index, item_type, **kw):
+    def insert(self, index, item_type, kw):
         """Internal function."""
-        self.tk.call(self._w, 'insert', index, itemtype, *self._options(kw))
+        self.tk.call(self._w, 'insert', index, item_type, *self._options(kw))
 
     def insert_cascade(self, index, **kw):
         """Add hierarchical menu item at INDEX."""
