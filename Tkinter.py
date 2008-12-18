@@ -419,7 +419,7 @@ def getboolean(s, master=None):
     return setup_master(master).tk.getboolean(s)
 
 # Methods defined on both toplevel and interior widgets
-class Misc:
+class Misc(object):
     """Internal class.
 
     Base class which defines methods common for interior widgets.
@@ -1995,7 +1995,7 @@ class Wm:
     withdraw = wm_withdraw
 
 
-class Tk(object, Misc, Wm):
+class Tk(Misc, Wm):
     """Toplevel widget of Tk which represents mostly the main window
     of an appliation. It has an associated Tcl interpreter."""
 
@@ -2109,7 +2109,7 @@ def Tcl(screenName=None, baseName=None, className='Tk', useTk=0):
     return Tk(screenName, baseName, className, useTk)
 
 
-class BaseWidget(object, Misc):
+class BaseWidget(Misc):
     """Internal class."""
 
     def _setup(self, master, cnf):
@@ -2785,9 +2785,7 @@ class Listbox(Widget):
 
     def curselection(self):
         """Return list of indices of currently selected item."""
-        # XXX Ought to apply self._getints()...
-        return self.tk.splitlist(self.tk.call(
-            self._w, 'curselection'))
+        return self._getints(self.tk.call(self._w, 'curselection'))
 
     def delete(self, first, last=None):
         """Delete items from FIRST to LAST (not included)."""
@@ -2837,8 +2835,7 @@ class Listbox(Widget):
 
     def selection_clear(self, first, last=None):
         """Clear the selection from FIRST to LAST (not included)."""
-        self.tk.call(self._w,
-                 'selection', 'clear', first, last)
+        self.tk.call(self._w, 'selection', 'clear', first, last)
 
     select_clear = selection_clear
 
@@ -3086,6 +3083,7 @@ class PanedWindow(Widget):
         All geometry management options for child will be forgotten.
         """
         self.tk.call(self._w, 'forget', child)
+
     forget = remove
 
     def identify(self, x, y):
@@ -3102,7 +3100,7 @@ class PanedWindow(Widget):
 
     def proxy(self, *args):
         """Internal function."""
-        return self._getints(self.tk.call((self._w, 'proxy') + args)) or ()
+        return self._getints(self.tk.call(self._w, 'proxy', *args)) or ()
 
     def proxy_coord(self):
         """Return the x and y pair of the most recent proxy location."""
@@ -3152,7 +3150,7 @@ class PanedWindow(Widget):
         """
         return self.tk.call(self._w, 'panecget', child, '-' + option)
 
-    def paneconfigure(self, tag_or_id, option=None, **kw):
+    def paneconfigure(self, tag_or_id, query_opt=None, **kw):
         """Query or modify the management options for window.
 
         If no option is specified, returns a list describing all
@@ -3219,23 +3217,19 @@ class PanedWindow(Widget):
             in the panedwindow. Size may be any value accepted by
             Tk_GetPixels.
         """
-        #if cnf is None and not kw:
-        if not kw:
-            cnf = {}
-            for x in self.tk.call(self._w, 'paneconfigure', tag_or_id):
-                cnf[x[0][1:]] = (x[0][1:], ) + x[1:]
-            return cnf
-
-        # XXX test return
-        elif option is not None:
-            x = self.tk.call(self._w, 'paneconfigure', tag_or_id, '-' + option)
-            return x
-            #x = self.tk.split(self.tk.call(
-            #    self._w, 'paneconfigure', tagOrId, '-'+cnf))
-            #return (x[0][1:],) + x[1:]
-
+        if query_opt is not None:
+            result = self.tk.call(self._w, 'paneconfigure', tag_or_id,
+                    "-" + query_opt)
+            return {result[0][1:]: result[1:]}
+        elif not kw:
+            result = self.tk.call(self._w, 'paneconfigure', tag_or_id)
+            d = {}
+            for t in result:
+                d[t[0][1:]] = t[1:]
+            return d
         else:
-            self.tk.call(self._w, 'paneconfigure', tagOrId, *self._options(kw))
+            self.tk.call(self._w, 'paneconfigure', tag_or_id,
+                    *self._options(kw))
 
     paneconfig = paneconfigure
 
