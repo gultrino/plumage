@@ -204,6 +204,7 @@ PyObj_ToTcl(PyObject *obj)
 		CheckInfRecursion("sequence has infinite recursion");
 		/* 'i' has been set by CheckInfRecursion */
 		if (i != 0) {
+			PyObject_Print(obj, stdout, 0);
 			ckfree((char *)objv);
 			return NULL;
 		}
@@ -215,6 +216,8 @@ PyObj_ToTcl(PyObject *obj)
 
 			if (objv[i] == NULL) {
 				ckfree((char *)objv);
+				/* finish what CheckInfRecursion started */
+				Py_ReprLeave(obj);
 				return NULL;
 			}
 
@@ -222,6 +225,8 @@ PyObj_ToTcl(PyObject *obj)
 		}
 		tclobj = Tcl_NewListObj(objc, objv);
 		ckfree((char *)objv);
+		/* finish what CheckInfRecursion started */
+		Py_ReprLeave(obj);
 	}
 
 
@@ -250,6 +255,8 @@ PyObj_ToTcl(PyObject *obj)
 #if TCL_MAJORMINOR < 805
 				ckfree((char *)objv);
 #endif
+				/* finish what CheckInfRecursion started */
+				Py_ReprLeave(obj);
 				return NULL;
 			}
 #if TCL_MAJORMINOR >= 805
@@ -264,6 +271,8 @@ PyObj_ToTcl(PyObject *obj)
 		tclobj = Tcl_NewListObj(objc, objv);
 		ckfree((char *)objv);
 #endif
+		/* finish what CheckInfRecursion started */
+		Py_ReprLeave(obj);
 	}
 
 	else {
