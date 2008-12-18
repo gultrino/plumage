@@ -1752,11 +1752,11 @@ class Grid:
         of the slaves will determine the size of this widget. If no argument
         is given, the current setting will be returned.
         """
-        if flag is None:
-            return self._getboolean(self.tk.call('grid', 'propagate', self._w))
-        else:
-            self.tk.call('grid', 'propagate', self._w, flag)
+        r = self.tk.call('grid', 'propagate', self._w, flag)
+        if flag is not None:
+            return self._getboolean(r)
 
+    # XXX test
     def grid_rowconfigure(self, index, query_opt=None, **kw):
         """Configure row INDEX of a grid.
 
