@@ -93,6 +93,7 @@ def _dict_from_tcltuple(ttuple):
 
     return retdict
 
+# XXX this is very likely to disappear from here
 def _val_or_dict(options, func, *args, **kw):
     """Format options then call func with args and options and return
     the appropriate result. If something more sofisticated is needed to
@@ -758,6 +759,7 @@ class Misc(object):
             kw['displayof'] = self._w
         return self.tk.call('selection', 'get', *self._options(kw))
 
+    # XXX test
     def selection_handle(self, command, **kw):
         """Specify a function COMMAND to call if the X
         selection owned by this widget is queried by another
@@ -771,15 +773,28 @@ class Misc(object):
         selection - name of the selection (default PRIMARY),
         type - type of the selection (e.g. STRING, FILE_NAME)."""
         name = self._register(command)
-        self.tk.call('selection', 'handle',
-                *(self._options(kw) + (self._w, name)))
+        try:
+            self.tk.call('selection', 'handle',
+                    *(self._options(kw) + (self._w, name)))
+        except TclError:
+            # call failed, remove the just registered command
+            self._deletecommand(name)
+            raise
 
+    # XXX test
     def selection_own(self, **kw):
         """Become owner of X selection.
 
         A keyword parameter selection specifies the name of
         the selection (default PRIMARY)."""
-        self.tk.call('selection', 'own', *(self._options(kw) + (self._w,)))
+        opts, cmds = self._options(kw, return_cmds=True)
+        try:
+            self.tk.call('selection', 'own', *(opts + (self._w,)))
+        except TclError:
+            # call failed, remove the just registered commands
+            for cmd in cmds:
+                self._deletecommand(cmd)
+            raise
 
     def selection_own_get(self, **kw):
         """Return owner of X selection.
@@ -1250,8 +1265,13 @@ class Misc(object):
             return ('-displayof', self._w)
         return ()
 
-    def _options(self, kw):
-        """Internal function."""
+    def _options(self, kw, return_cmds=False):
+        """Internal function.
+
+        If return_cmds is True, commands registered while parsing kw will
+        be returned.
+        """
+        cmds = []
         res = ()
         for k, v in kw.iteritems():
             if v is None:
@@ -1271,11 +1291,20 @@ class Misc(object):
                     # delete command if any, then add one
                     if cmd:
                         self._deletecommand(cmd)
-                    v = self._register(v)
+
+                # command registration cannot be skipped even if TclError is
+                # raised because _options might be called for some other use
+                # besides widget creation or configuration of widget commands
+                # (e.g. handling of options for specific Tcl commands).
+                v = self._register(v)
+                cmds.append(v)
 
             res += ('-' + k, v)
 
-        return res
+        if return_cmds:
+            return res, cmds
+        else:
+            return res
 
     def nametowidget(self, name):
         """Return the Tkinter instance of a widget identified by
@@ -1402,13 +1431,24 @@ class Misc(object):
         root = self._root()
         root.report_callback_exception(exc, val, tb)
 
-    # XXX test
     def _configure(self, query_opt, *args, **kw):
         """Internal function."""
         if query_opt is not None:
             kw[query_opt] = None
-        return _val_or_dict(kw, self.tk.call, self._w,
-                opt_formatter=self._options, *args)
+        opts, cmds = self._options(kw, return_cmds=True)
+
+        try:
+            res = self.tk.call(self._w, *(args + opts))
+        except TclError:
+            # remove just registered commands
+            for cmd in cmds:
+                self._deletecommand(cmd)
+            raise
+
+        if len(opts) % 2:
+            # option specified without a value, return its value
+            return res
+        return _dict_from_tcltuple(res)
 
     def configure(self, query_opt=None, **kw):
         """Configure resources of a widget.
@@ -1551,7 +1591,7 @@ class Place:
 
     Base class to use the methods place_* in every widget."""
 
-    def place_configure(self, cnf={}, **kw):
+    def place_configure(self, query_opt=None, **kw):
         """Place a widget in the parent widget. Use as options:
         anchor=NSEW (or subset) - position anchor according to given direction
         bordermode="inside" or "outside" - whether to take border width of
@@ -1574,7 +1614,7 @@ class Place:
         y=amount - locate anchor of this widget at position y of master
         """
         # XXX
-        self.tk.call('place', 'configure', self._w, *self._options(cnf, kw))
+        self.tk.call('place', 'configure', self._w, *self._options(kw))
 
     place = place_configure
 
@@ -2150,6 +2190,7 @@ class BaseWidget(Misc):
         if self._tclCommands is None:
             self._tclCommands = set()
 
+        # XXX
         self.tk.call(widgetname, self._w, *self._options(kw))
 
     def destroy(self):
@@ -2933,9 +2974,16 @@ class Menu(Widget):
         """Activate entry at INDEX."""
         self.tk.call(self._w, 'activate', index)
 
+    # XXX test
     def add(self, item_type, kw):
         """Internal function."""
-        self.tk.call(self._w, 'add', item_type, *self._options(kw))
+        opts, cmds = self._options(kw, return_cmds=True)
+        try:
+            self.tk.call(self._w, 'add', item_type, *opts)
+        except TclError:
+            for cmd in cmds:
+                self._deletecommand(cmd)
+            raise
 
     def add_cascade(self, **kw):
         """Add hierarchical menu item."""
@@ -2957,9 +3005,16 @@ class Menu(Widget):
         """Add separator."""
         self.add('separator', kw)
 
+    # XXX test
     def insert(self, index, item_type, kw):
         """Internal function."""
-        self.tk.call(self._w, 'insert', index, item_type, *self._options(kw))
+        opts, cmds = self._options(kw, return_cmds=True)
+        try:
+            self.tk.call(self._w, 'insert', index, item_type, *opts)
+        except TclError:
+            for cmd in cmds:
+                self._deletecommand(cmd)
+            raise
 
     def insert_cascade(self, index, **kw):
         """Add hierarchical menu item at INDEX."""
