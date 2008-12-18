@@ -65,7 +65,7 @@ test_dummy_pyconversion(PyObject *self, PyObject *o)
 	Tcl_Obj *tobj = PyObj_ToTcl(o);
 
 	if (tobj == NULL) {
-		if (!PyErr_Occurred)
+		if (!PyErr_Occurred())
 			PyErr_SetString(TestError, Tcl_GetStringResult(tclpy->interp));
 		return NULL;
 	}
