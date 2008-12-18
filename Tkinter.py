@@ -759,7 +759,6 @@ class Misc(object):
             kw['displayof'] = self._w
         return self.tk.call('selection', 'get', *self._options(kw))
 
-    # XXX test
     def selection_handle(self, command, **kw):
         """Specify a function COMMAND to call if the X
         selection owned by this widget is queried by another
@@ -781,7 +780,6 @@ class Misc(object):
             self._deletecommand(name)
             raise
 
-    # XXX test
     def selection_own(self, **kw):
         """Become owner of X selection.
 
@@ -1448,7 +1446,11 @@ class Misc(object):
         if len(opts) % 2:
             # option specified without a value, return its value
             return res
-        return _dict_from_tcltuple(res)
+
+        d = {}
+        for t in res:
+            d[t[0][1:]] = t[1:]
+        return d
 
     def configure(self, query_opt=None, **kw):
         """Configure resources of a widget.
@@ -2190,7 +2192,6 @@ class BaseWidget(Misc):
         if self._tclCommands is None:
             self._tclCommands = set()
 
-        # XXX
         self.tk.call(widgetname, self._w, *self._options(kw))
 
     def destroy(self):
@@ -2974,7 +2975,6 @@ class Menu(Widget):
         """Activate entry at INDEX."""
         self.tk.call(self._w, 'activate', index)
 
-    # XXX test
     def add(self, item_type, kw):
         """Internal function."""
         opts, cmds = self._options(kw, return_cmds=True)
@@ -3005,7 +3005,6 @@ class Menu(Widget):
         """Add separator."""
         self.add('separator', kw)
 
-    # XXX test
     def insert(self, index, item_type, kw):
         """Internal function."""
         opts, cmds = self._options(kw, return_cmds=True)
@@ -3047,7 +3046,7 @@ class Menu(Widget):
 
         for i in range(num_index1, num_index2 + 1):
             if 'command' in self.entryconfig(i):
-                c = str(self.entrycget(i, 'command'))
+                c = self.entrycget(i, 'command')
                 if c:
                     self._deletecommand(c)
         self.tk.call(self._w, 'delete', index1, index2)
@@ -3285,6 +3284,7 @@ class PanedWindow(Widget):
         elif not kw:
             result = self.tk.call(self._w, 'paneconfigure', tag_or_id)
             d = {}
+            # XXX this format is getting common here
             for t in result:
                 d[t[0][1:]] = t[1:]
             return d
