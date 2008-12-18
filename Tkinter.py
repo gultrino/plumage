@@ -41,9 +41,9 @@ import Tkconstants
 from Tkconstants import *
 
 __all__ = ['Tk', 'Tcl', 'Toplevel', 'Button', 'Canvas', 'Checkbutton',
-        'Entry', 'Label', 'LabelFrame', 'Listbox', 'Menu', 'Menubutton',
-        'Message', 'PanedWindow', 'Radiobutton', 'Scale', 'Scrollbar',
-        'Spinbox', 'Text', 'OptionMenu', 'Widget',
+        'Entry', 'Frame', 'Label', 'LabelFrame', 'Listbox', 'Menu',
+        'Menubutton', 'Message', 'PanedWindow', 'Radiobutton', 'Scale',
+        'Scrollbar', 'Spinbox', 'Text', 'OptionMenu', 'Widget',
 
         # variables
         'Variable', 'StringVar', 'IntVar', 'DoubleVar', 'BooleanVar',
