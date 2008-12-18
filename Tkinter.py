@@ -1645,7 +1645,6 @@ class Place:
                self.tk.splitlist(self.tk.call('place', 'slaves', self._w)))
 
 
-# XXX support relative placement
 class Grid:
     """Geometry manager Grid.
 
@@ -1661,7 +1660,7 @@ class Grid:
         # XXX index could be a list of indices
         return _val_or_dict(kw, self.tk.call, 'grid', command, self._w, index)
 
-    def grid_configure(self, query_opt=None, **kw):
+    def grid_configure(self, **kw):
         """Position a widget in the parent widget in a grid.
 
         Use as options:
@@ -1678,10 +1677,9 @@ class Grid:
         sticky=NSEW - if cell is larger on which sides will this
                       widget stick to the cell boundary
         """
-        if query_opt is not None:
-            if query_opt[-1] == '_':
-                query_opt = query_opt[:-1]
-            kw[query_opt] = None
+        #relative = kw.pop('relative', None)
+        #if relative:
+        #    pass
         self.tk.call('grid', 'configure', self._w, *self._options(kw))
 
     grid = grid_configure
