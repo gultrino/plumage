@@ -58,8 +58,33 @@ test_tclnull_tonull(PyObject *self, PyObject *args)
 }
 
 
+/* Dummy conversion from a Python object to a Tcl Object */
+static PyObject *
+test_dummy_pyconversion(PyObject *self, PyObject *o)
+{
+	Tcl_Obj *tobj = PyObj_ToTcl(o);
+
+	if (tobj == NULL) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(TestError, Tcl_GetStringResult(tclpy->interp));
+		return NULL;
+	}
+
+	Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(dummy_pyconversion_doc,
+		"Tries to conver a Python object to a Tcl object, if it fails\n"
+		"TestError is raised if an error ocurred in Tcl or some other\n"
+		"Python exception if it was caused by Python itself.\n"
+		"If the conversion succeeded, None is returned.");
+
+
 static PyMethodDef test_methods[] = {
 	{"test_tclnull_tonull", test_tclnull_tonull, METH_VARARGS, NULL},
+	{"test_dummy_pyconversion", test_dummy_pyconversion, METH_O,
+		dummy_pyconversion_doc},
+
 	{NULL},
 };
 
