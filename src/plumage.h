@@ -8,6 +8,7 @@
 typedef struct {
 	PyObject_HEAD
 	/* type specific fields follow */
+	PyObject *dict;
 	Tcl_Interp *interp;
 
 	Tcl_ThreadId tcl_thread_id;
