@@ -877,6 +877,42 @@ TclInterp_getthreadid(TclInterpObj *self, void *closure)
 
 PyDoc_STRVAR(getthreadid_doc, "Return the Tcl thread id.");
 
+static PyObject *
+TclInterp_getdict(TclInterpObj *self)
+{
+	if (self->dict == NULL) {
+		self->dict = PyDict_New();
+		if (self->dict == NULL)
+			return NULL;
+	}
+	Py_INCREF(self->dict);
+	return self->dict;
+}
+
+static int
+TclInterp_setdict(TclInterpObj *self, PyObject *value)
+{
+	PyObject *tmp;
+
+	if (value == NULL) {
+		PyErr_SetString(PyExc_TypeError, "Cannot delete __dict__ attribute");
+		return -1;
+	}
+
+	if (!PyDict_Check(value)) {
+		PyErr_Format(PyExc_TypeError, "'%s' is not a dict",
+				value->ob_type->tp_name);
+		return -1;
+	}
+
+	tmp = self->dict;
+	Py_INCREF(value);
+	self->dict = value;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
+
 static PyGetSetDef TclInterp_getset[] = {
 	{"errcheck_interval",
 		(getter)TclInterp_geterrcheck, (setter)TclInterp_seterrcheck,
@@ -894,6 +930,7 @@ static PyGetSetDef TclInterp_getset[] = {
 		(getter)TclInterp_getthreadid, NULL,
 		getthreadid_doc,
 		NULL},
+	{"__dict__", (getter)TclInterp_getdict, (setter)TclInterp_setdict},
 	{NULL}
 };
 
@@ -916,6 +953,7 @@ TclInterp_New(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 	if ((self = (TclInterpObj *)type->tp_alloc(type, 0)) == NULL)
 		return NULL;
 
+	self->dict = NULL;
 	self->interp = Tcl_CreateInterp();
 
 	if (Tcl_Init(self->interp) == TCL_ERROR) {
@@ -1026,11 +1064,31 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 	return 0;
 }
 
+static int
+TclInterp_Traverse(TclInterpObj *self, visitproc visit, void *arg)
+{
+	Py_VISIT(self->bgerr_handler);
+	Py_VISIT(self->dict);
+	return 0;
+}
+
+static int
+TclInterp_Clear(TclInterpObj *self)
+{
+	Py_CLEAR(self->bgerr_handler);
+	Py_CLEAR(self->dict);
+	return 0;
+}
+
 static void
 TclInterp_dealloc(TclInterpObj *self)
 {
+	TclInterp_Clear(self);
+	PyObject_GC_UnTrack(self);
+	Py_XDECREF(self->dict);
 	Py_XDECREF(self->bgerr_handler);
 	Tcl_DeleteInterp(self->interp);
+
 	self->ob_type->tp_free((PyObject *)self);
 }
 
@@ -1056,10 +1114,10 @@ static PyTypeObject TclInterpType = {
 	0,										/* tp_getattro */
 	0,										/* tp_setattro */
 	0,										/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,						/* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
 	"Tcl interpreter bridge",				/* tp_doc */
-	0,										/* tp_traverse */
-	0,										/* tp_clear */
+	(traverseproc)TclInterp_Traverse,		/* tp_traverse */
+	(inquiry)TclInterp_Clear,				/* tp_clear */
 	0,										/* tp_richcompare */
 	0,										/* tp_weaklistoffset */
 	0,										/* tp_iter */
@@ -1071,7 +1129,7 @@ static PyTypeObject TclInterpType = {
 	0,										/* tp_dict */
 	0,										/* tp_descr_get */
 	0,										/* tp_descr_set */
-	0,										/* tp_dictoffset */
+	offsetof(TclInterpObj, dict),			/* tp_dictoffset */
 	(initproc)TclInterp_Init,				/* tp_init */
 	0,										/* tp_alloc */
 	TclInterp_New							/* tp_new */
