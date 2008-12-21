@@ -767,7 +767,7 @@ PyDoc_STRVAR(splitlist_doc, "splitlist(tcllist) -> tuple\n\n"
 		"to a Tcl list which will then be converted to a Python tuple.\n");
 
 
-static PyMethodDef TclInterp_methods[] = {
+static PyMethodDef TclInterp_Methods[] = {
 	/* Calling into Tcl */
 	{"call", (PyCFunction)TclInterp_call, METH_VARARGS, call_doc},
 	{"eval", (PyCFunction)TclInterp_eval, METH_VARARGS, NULL},
@@ -807,13 +807,13 @@ static PyMethodDef TclInterp_methods[] = {
 
 
 static PyObject *
-TclInterp_geterrcheck(TclInterpObj *self, void *closure)
+TclInterp_geterrcheck(TclInterpObj *self)
 {
 	return PyInt_FromLong(self->err_check_interval);
 }
 
 static int
-TclInterp_seterrcheck(TclInterpObj *self, PyObject *value, void *close)
+TclInterp_seterrcheck(TclInterpObj *self, PyObject *value)
 {
 	long checkval;
 
@@ -849,7 +849,7 @@ PyDoc_STRVAR(errcheck_doc,
 
 
 static PyObject *
-TclInterp_getthreaded(TclInterpObj *self, void *closure)
+TclInterp_getthreaded(TclInterpObj *self)
 {
 	return PyBool_FromLong(self->tcl_thread_id != 0);
 }
@@ -859,7 +859,7 @@ PyDoc_STRVAR(getthreaded_doc,
 
 
 static PyObject *
-TclInterp_gettkloaded(TclInterpObj *self, void *closure)
+TclInterp_gettkloaded(TclInterpObj *self)
 {
 	return PyBool_FromLong(self->tk_loaded);
 }
@@ -869,7 +869,7 @@ PyDoc_STRVAR(gettkloaded_doc,
 
 
 static PyObject *
-TclInterp_getthreadid(TclInterpObj *self, void *closure)
+TclInterp_getthreadid(TclInterpObj *self)
 {
 	/* XXX how incorrect is this ? */
 	return Py_BuildValue("l", self->tcl_thread_id);
@@ -913,23 +913,13 @@ TclInterp_setdict(TclInterpObj *self, PyObject *value)
 }
 
 
-static PyGetSetDef TclInterp_getset[] = {
+static PyGetSetDef TclInterp_GetSet[] = {
 	{"errcheck_interval",
 		(getter)TclInterp_geterrcheck, (setter)TclInterp_seterrcheck,
-		errcheck_doc,
-		NULL},
-	{"threaded",
-		(getter)TclInterp_getthreaded, NULL,
-		getthreaded_doc,
-		NULL},
-	{"tk_loaded",
-		(getter)TclInterp_gettkloaded, NULL,
-		gettkloaded_doc,
-		NULL},
-	{"thread_id",
-		(getter)TclInterp_getthreadid, NULL,
-		getthreadid_doc,
-		NULL},
+		errcheck_doc},
+	{"threaded", (getter)TclInterp_getthreaded, NULL, getthreaded_doc},
+	{"tk_loaded", (getter)TclInterp_gettkloaded, NULL, gettkloaded_doc},
+	{"thread_id", (getter)TclInterp_getthreadid, NULL, getthreadid_doc},
 	{"__dict__", (getter)TclInterp_getdict, (setter)TclInterp_setdict},
 	{NULL}
 };
@@ -1081,7 +1071,7 @@ TclInterp_Clear(TclInterpObj *self)
 }
 
 static void
-TclInterp_dealloc(TclInterpObj *self)
+TclInterp_Dealloc(TclInterpObj *self)
 {
 	TclInterp_Clear(self);
 	PyObject_GC_UnTrack(self);
@@ -1099,7 +1089,7 @@ static PyTypeObject TclInterpType = {
 	"plumage.Interp",						/* tp_name */
 	sizeof(TclInterpObj),					/* tp_basicsize */
 	0,										/* tp_itemsize */
-	(destructor)TclInterp_dealloc,		    /* tp_dealloc */
+	(destructor)TclInterp_Dealloc,		    /* tp_dealloc */
 	0,										/* tp_print */
 	0,										/* tp_getattr */
 	0,										/* tp_setattr */
@@ -1122,9 +1112,9 @@ static PyTypeObject TclInterpType = {
 	0,										/* tp_weaklistoffset */
 	0,										/* tp_iter */
 	0,										/* tp_iternext */
-	TclInterp_methods,						/* tp_methods */
+	TclInterp_Methods,						/* tp_methods */
 	0,										/* tp_members */
-	TclInterp_getset,						/* tp_getset */
+	TclInterp_GetSet,						/* tp_getset */
 	0,										/* tp_base */
 	0,										/* tp_dict */
 	0,										/* tp_descr_get */
