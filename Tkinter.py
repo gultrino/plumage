@@ -281,13 +281,7 @@ class Variable(object):
         # will end up raising a TclError, I will let that happen
         lmode = [self._modes[m] if m in self._modes else m for m in mode]
         cbname = self._master._register(callback)
-        try:
-            self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
-        except TclError:
-            # remove the just registered command since the trace call failed
-            self._master._deletecommand(cbname)
-            raise
-
+        self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
         return cbname
 
     trace = trace_variable
@@ -301,7 +295,7 @@ class Variable(object):
         """
         lmode = [self._modes[m] for m in mode]
         self._tk.call("trace", "remove", "variable", self._name, lmode, cbname)
-        self._master._deletecommand(cbname)
+        self._master.deletecommand(cbname)
 
     def trace_vinfo(self):
         """Return all trace callback information."""
@@ -442,9 +436,9 @@ class Misc(object):
         if self._tclCommands is not None:
             for name in self._tclCommands:
                 self.tk.deletecommand(name)
-            self._tclCommands = set()
+            self._tclCommands = []
 
-    def _deletecommand(self, name):
+    def deletecommand(self, name):
         """Internal function.
 
         Delete the Tcl command provided in NAME."""
@@ -602,16 +596,11 @@ class Misc(object):
                     func(*args)
                 finally:
                     try:
-                        self._deletecommand(name)
+                        self.deletecommand(name)
                     except TclError:
                         pass
             name = self._register(callit)
-            try:
-                return self.tk.call('after', ms, name)
-            except TclError:
-                # remove the just registered command name
-                self._deletecommand(name)
-                raise
+            return self.tk.call('after', ms, name)
 
     def after_idle(self, func, *args):
         """Call FUNC once if the Tcl main loop has no event to
@@ -632,7 +621,7 @@ class Misc(object):
             # In Tk 8.4, splitlist may return (script, type) or (script,)
             # XXX test this
             script = self.tk.splitlist(data)[0]
-            self._deletecommand(script)
+            self.deletecommand(script)
         except TclError:
             pass
         self.tk.call('after', 'cancel', id)
@@ -772,27 +761,15 @@ class Misc(object):
         selection - name of the selection (default PRIMARY),
         type - type of the selection (e.g. STRING, FILE_NAME)."""
         name = self._register(command)
-        try:
-            self.tk.call('selection', 'handle',
-                    *(self._options(kw) + (self._w, name)))
-        except TclError:
-            # call failed, remove the just registered command
-            self._deletecommand(name)
-            raise
+        self.tk.call('selection', 'handle',
+                *(self._options(kw) + (self._w, name)))
 
     def selection_own(self, **kw):
         """Become owner of X selection.
 
         A keyword parameter selection specifies the name of
         the selection (default PRIMARY)."""
-        opts, cmds = self._options(kw, return_cmds=True)
-        try:
-            self.tk.call('selection', 'own', *(opts + (self._w,)))
-        except TclError:
-            # call failed, remove the just registered commands
-            for cmd in cmds:
-                self._deletecommand(cmd)
-            raise
+        self.tk.call('selection', 'own', *(self._options(kw) + (self._w,)))
 
     def selection_own_get(self, **kw):
         """Return owner of X selection.
@@ -1105,31 +1082,25 @@ class Misc(object):
     def _bind(self, what, sequence, func, add, widgetcmd=1):
         """Internal function."""
         if isinstance(func, str):
-            self.tk.call(what + (sequence, func))
+            self.tk.call(*(what + (sequence, func)))
 
         elif func:
             if not add:
                 # remove previous registered command(s) if any
                 for cmd in self._bind(what, sequence, None, None):
                     if widgetcmd:
-                        self._deletecommand(cmd)
+                        self.deletecommand(cmd)
                     else:
-                        self._root()._deletecommand(cmd)
+                        self._root().deletecommand(cmd)
 
+            # XXX
             funcid = self._register(func, self._substitute, widgetcmd)
             cmd = ('%sif {"[%s %s]" == "break"} break\n'
                     % (add and '+' or '', funcid, self._subst_format_str))
-            # try to bind the new command, if it fails we must remove the
-            # command just registered by _register otherwise it will stay
-            # around for too long
-            try:
-                self.tk.call(what + (sequence, cmd))
-            except TclError:
-                self._deletecommand(funcid)
-                raise
+            self.tk.call(*(what + (sequence, cmd))
 
         elif sequence:
-            return self._bind_names(self.tk.call(what + (sequence,)))
+            return self._bind_names(self.tk.call(*(what + (sequence,))))
 
         else:
             return self.tk.splitlist(self.tk.call(what))
@@ -1198,7 +1169,7 @@ class Misc(object):
         names = self.bind(sequence)
         self.tk.call('bind', self._w, sequence, '')
         for cmd in names:
-            self._deletecommand(cmd)
+            self.deletecommand(cmd)
 
     def bind_all(self, sequence=None, func=None, add=None):
         """Bind to all widgets at an event SEQUENCE a call to function FUNC.
@@ -1213,7 +1184,7 @@ class Misc(object):
         names = self.bind_all(sequence)
         self.tk.call('bind', 'all' , sequence, '')
         for cmd in names:
-            self._root()._deletecommand(cmd)
+            self._root().deletecommand(cmd)
 
     def bind_class(self, className, sequence=None, func=None, add=None):
         """Bind to widgets with bindtag CLASSNAME at event
@@ -1230,7 +1201,7 @@ class Misc(object):
         names = self.bind_class(className, sequence)
         self.tk.call('bind', className , sequence, '')
         for cmd in names:
-            self._root()._deletecommand(cmd)
+            self._root().deletecommand(cmd)
 
     def mainloop(self):
         """Call the mainloop of Tk."""
@@ -1263,13 +1234,8 @@ class Misc(object):
             return ('-displayof', self._w)
         return ()
 
-    def _options(self, kw, return_cmds=False):
-        """Internal function.
-
-        If return_cmds is True, commands registered while parsing kw will
-        be returned.
-        """
-        cmds = []
+    def _options(self, kw):
+        """Internal function."""
         res = ()
         for k, v in kw.iteritems():
             if v is None:
@@ -1288,21 +1254,17 @@ class Misc(object):
                 else:
                     # delete command if any, then add one
                     if cmd:
-                        self._deletecommand(cmd)
+                        self.deletecommand(cmd)
 
                 # command registration cannot be skipped even if TclError is
                 # raised because _options might be called for some other use
                 # besides widget creation or configuration of widget commands
                 # (e.g. handling of options for specific Tcl commands).
                 v = self._register(v)
-                cmds.append(v)
 
             res += ('-' + k, v)
 
-        if return_cmds:
-            return res, cmds
-        else:
-            return res
+        return res
 
     def nametowidget(self, name):
         """Return the Tkinter instance of a widget identified by
@@ -1324,10 +1286,10 @@ class Misc(object):
     _nametowidget = nametowidget
 
     def _register(self, func, subst=None, widgetcmd=1):
+        # XXX
         """Return a newly created Tcl function. If this function is called,
         the Python function FUNC will be executed. An optional function
         SUBST can be given which will be executed before FUNC."""
-        # XXX
         f = CallWrapper(func, subst, self).__call__
         name = repr(id(f))
         try:
@@ -1342,13 +1304,13 @@ class Misc(object):
 
         if widgetcmd: # this command pertains to a single widget
             if self._tclCommands is None:
-                self._tclCommands = set()
-            self._tclCommands.add(name)
+                self._tclCommands = []
+            self._tclCommands.append(name)
         else: # this command pertains to the associated interpreter
             root = self._root()
             if root._tclCommands is None:
-                root._tclCommands = set()
-            root._tclCommands.add(name)
+                root._tclCommands = []
+            root._tclCommands.append(name)
 
         return name
 
@@ -1433,16 +1395,11 @@ class Misc(object):
         """Internal function."""
         if query_opt is not None:
             kw[query_opt] = None
-        opts, cmds = self._options(kw, return_cmds=True)
+        opts = self._options(kw)
 
-        try:
-            res = self.tk.call(self._w, *(args + opts))
-        except TclError:
-            # remove just registered commands
-            for cmd in cmds:
-                self._deletecommand(cmd)
-            raise
+        res = self.tk.call(self._w, *(args + opts))
 
+        # XXX this won't work when using _options
         if len(opts) % 2:
             # option specified without a value, return its value
             return res
@@ -1989,7 +1946,7 @@ class Wm:
         if func or func == '':
             cmd = self.wm_protocol(name)
             if cmd:
-                self._deletecommand(cmd)
+                self.deletecommand(cmd)
 
         if hasattr(func, '__call__'):
             func = self._register(func)
@@ -2095,9 +2052,9 @@ class Tk(Misc, Wm):
         # We need to inline parts of _register here, _register
         # would register differently-named commands.
         if self._tclCommands is None:
-            self._tclCommands = set()
+            self._tclCommands = []
         self.tk.createcommand('exit', _exit)
-        self._tclCommands.add('exit')
+        self._tclCommands.append('exit')
         if _support_default_root and not _default_root:
             _default_root = self
         self.protocol("WM_DELETE_WINDOW", self.destroy)
@@ -2188,7 +2145,7 @@ class BaseWidget(Misc):
         BaseWidget._setup(self, master, kw)
 
         if self._tclCommands is None:
-            self._tclCommands = set()
+            self._tclCommands = []
 
         self.tk.call(widgetname, self._w, *self._options(kw))
 
@@ -2342,7 +2299,7 @@ class Canvas(Widget):
         function identified with FUNCID."""
         self.tk.call(self._w, 'bind', tagOrId, sequence, '')
         if funcid:
-            self._deletecommand(funcid)
+            self.deletecommand(funcid)
 
     def tag_bind(self, tagOrId, sequence=None, func=None, add=None):
         """Bind to all items with TAGORID at event SEQUENCE a call to
@@ -2975,13 +2932,7 @@ class Menu(Widget):
 
     def add(self, item_type, kw):
         """Internal function."""
-        opts, cmds = self._options(kw, return_cmds=True)
-        try:
-            self.tk.call(self._w, 'add', item_type, *opts)
-        except TclError:
-            for cmd in cmds:
-                self._deletecommand(cmd)
-            raise
+        self.tk.call(self._w, 'add', item_type, *self._options(kw))
 
     def add_cascade(self, **kw):
         """Add hierarchical menu item."""
@@ -3005,13 +2956,7 @@ class Menu(Widget):
 
     def insert(self, index, item_type, kw):
         """Internal function."""
-        opts, cmds = self._options(kw, return_cmds=True)
-        try:
-            self.tk.call(self._w, 'insert', index, item_type, *opts)
-        except TclError:
-            for cmd in cmds:
-                self._deletecommand(cmd)
-            raise
+        self.tk.call(self._w, 'insert', index, item_type, *self._options(kw))
 
     def insert_cascade(self, index, **kw):
         """Add hierarchical menu item at INDEX."""
@@ -3046,7 +2991,7 @@ class Menu(Widget):
             if 'command' in self.entryconfig(i):
                 c = self.entrycget(i, 'command')
                 if c:
-                    self._deletecommand(c)
+                    self.deletecommand(c)
         self.tk.call(self._w, 'delete', index1, index2)
 
     def entrycget(self, index, option):
@@ -3064,6 +3009,8 @@ class Menu(Widget):
         i = self.tk.call(self._w, 'index', index)
         if i == 'none':
             return None
+        #print i, "<<<"
+        # XXX I have seen 'i' being a tuple
         return getint(i)
 
     def invoke(self, index):
@@ -3673,7 +3620,7 @@ class Text(Widget):
             return result
         finally:
             if func_name:
-                self._deletecommand(func_name)
+                self.deletecommand(func_name)
 
     ## new in tk8.4
     def edit(self, *args):
@@ -3838,7 +3785,7 @@ class Text(Widget):
         function identified with FUNCID."""
         self.tk.call(self._w, 'tag', 'bind', tagName, sequence, '')
         if funcid:
-            self._deletecommand(funcid)
+            self.deletecommand(funcid)
 
     def tag_bind(self, tagName, sequence, func, add=None):
         """Bind to all characters with TAGNAME at event SEQUENCE a call to
