@@ -2116,9 +2116,9 @@ class Tk(Misc, Wm):
         self.tk.call('destroy', self._w)
         Misc.destroy(self)
 
-        # destroy the plumage.Interp instance
+        # remove the overrided tk.call
         self._tkcall = None
-        del self.tk
+        del self.tk.call
 
         global _default_root
         if _support_default_root and _default_root is self:
