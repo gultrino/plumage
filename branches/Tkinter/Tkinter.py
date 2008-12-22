@@ -1285,11 +1285,11 @@ class Misc(object):
 
     _nametowidget = nametowidget
 
-    def _pre_register(self, caller, func, subst):
+    def _pre_register(self, func, subst):
         """Internal function.
 
         Wrap caller, func and subst in a CallWrapper and return it."""
-        f = CallWrapper(caller, func, subst, self)
+        f = CallWrapper(func, subst, self)
         name = repr(id(f))
         try:
             func = func.im_func
@@ -1310,7 +1310,7 @@ class Misc(object):
         Any time the associated command in Tcl is invoked, the Python func
         will be called. If subst is given, it should be a function to be
         executed before func."""
-        f = self._pre_register(self, func, subst)
+        f = self._pre_register(func, subst)
         f.widgetcmd = widgetcmd
         return f
 
@@ -1483,9 +1483,8 @@ class CallWrapper:
     """Internal class. Stores function to call when some user
     defined Tcl function is called e.g. after an event occurred."""
 
-    def __init__(self, caller, func, subst, widget):
+    def __init__(self, func, subst, widget):
         """Store FUNC, SUBST and WIDGET as members."""
-        self.caller = caller
         self.func = func
         self.subst = subst
         self.widget = widget
@@ -2064,11 +2063,11 @@ class Tk(Misc, Wm):
         cmds = []
 
         for item in kw.get('cmdcreate', ()):
-            Misc._finish_register(item.caller, str(item), item, item.widgetcmd)
+            Misc._finish_register(item.widget, str(item), item, item.widgetcmd)
             cmds.append(item)
         for arg in args:
             if isinstance(arg, CallWrapper):
-                Misc._finish_register(arg.caller, str(arg), arg, arg.widgetcmd)
+                Misc._finish_register(arg.widget, str(arg), arg, arg.widgetcmd)
                 cmds.append(arg)
 
         try:
@@ -2076,7 +2075,7 @@ class Tk(Misc, Wm):
         except TclError:
             # remove commands registered for this call since it failed
             for arg in cmds:
-                Misc.deletecommand(arg.caller, str(arg))
+                Misc.deletecommand(arg.widget, str(arg))
             raise
 
     def loadtk(self):
