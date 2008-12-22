@@ -19,7 +19,7 @@ class TclVariableTest(unittest.TestCase):
         var = Tkinter.Variable()
         master = var._master
 
-        cmds = var._master._tclCommands.copy()
+        cmds = var._master._tclCommands[:]
 
         n1 = var.trace("ru", test)
         n2 = var.trace("ru", test)
@@ -32,7 +32,7 @@ class TclVariableTest(unittest.TestCase):
 
         # check that failing to call trace doesn't leave an unused command
         # around
-        cmds = self.var._master._tclCommands.copy()
+        cmds = self.var._master._tclCommands[:]
         self.failUnlessRaises(Tkinter.TclError, self.var.trace, "wrong", test)
         self.failIf(cmds != self.var._master._tclCommands)
 

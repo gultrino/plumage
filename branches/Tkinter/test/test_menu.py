@@ -22,7 +22,7 @@ class MenuTest(unittest.TestCase):
 
         # Calling into Tcl may cause new commands to be registered, but if the
         # call fails, those commands should be removed. Checking for that here
-        cmds = menu._tclCommands.copy()
+        cmds = menu._tclCommands[:]
         self.failUnlessRaises(Tkinter.TclError,
                 menu.add_command, command=test, badoption=True)
         self.failUnlessEqual(cmds, menu._tclCommands)
@@ -40,7 +40,7 @@ class MenuTest(unittest.TestCase):
 
         # Calling into Tcl may cause new commands to be registered, but if the
         # call fails, those commands should be removed. Checking for that here
-        cmds = menu._tclCommands.copy()
+        cmds = menu._tclCommands[:]
         self.failUnlessRaises(Tkinter.TclError,
                 menu.insert_command, 1, command=test, badoption=True)
         self.failUnlessEqual(cmds, menu._tclCommands)

@@ -14,7 +14,7 @@ class WmTest(unittest.TestCase):
 
     def test_wmprotocol(self):
         test = lambda: None
-        cmds = self.root._tclCommands.copy()
+        cmds = self.root._tclCommands[:]
 
         self.root.wm_protocol("nicename", test)
         self.root.wm_protocol("nicename", func='')
