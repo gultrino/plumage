@@ -596,7 +596,7 @@ class Misc(object):
                     func(*args)
                 finally:
                     try:
-                        self.deletecommand(name)
+                        self.deletecommand(str(name))
                     except TclError:
                         pass
             name = self._register(callit)
