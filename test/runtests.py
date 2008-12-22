@@ -21,7 +21,6 @@ def get_tests(tests=None):
 
 def run_tests(tests, repeat=1):
     for test in tests:
-        rc_now = sys.gettotalrefcount()
         module = __import__(test)
         test = getattr(module, "test_main", None)
         for _ in xrange(repeat):
