@@ -280,9 +280,9 @@ class Variable(object):
         # if something in mode isn't in self._modes then the call to trace
         # will end up raising a TclError, I will let that happen
         lmode = [self._modes[m] if m in self._modes else m for m in mode]
-        cbname = self._master._register(callback)
-        self._tk.call("trace", "add", "variable", self._name, lmode, cbname)
-        return cbname
+        cb = self._master._register(callback)
+        self._tk.call("trace", "add", "variable", self._name, lmode, cb)
+        return cb.name
 
     trace = trace_variable
 
@@ -1097,7 +1097,7 @@ class Misc(object):
             funcid = self._register(func, self._substitute, widgetcmd)
             cmd = ('%sif {"[%s %s]" == "break"} break\n'
                     % (add and '+' or '', funcid, self._subst_format_str))
-            self.tk.call(*(what + (sequence, cmd))
+            self.tk.call(cmdcreate=[funcid], *(what + (sequence, cmd)))
 
         elif sequence:
             return self._bind_names(self.tk.call(*(what + (sequence,))))
@@ -1285,12 +1285,11 @@ class Misc(object):
 
     _nametowidget = nametowidget
 
-    def _register(self, func, subst=None, widgetcmd=1):
-        # XXX
-        """Return a newly created Tcl function. If this function is called,
-        the Python function FUNC will be executed. An optional function
-        SUBST can be given which will be executed before FUNC."""
-        f = CallWrapper(func, subst, self).__call__
+    def _pre_register(self, caller, func, subst):
+        """Internal function.
+
+        Wrap caller, func and subst in a CallWrapper and return it."""
+        f = CallWrapper(caller, func, subst, self)
         name = repr(id(f))
         try:
             func = func.im_func
@@ -1300,6 +1299,27 @@ class Misc(object):
             name = name + func.__name__
         except AttributeError:
             pass
+
+        f.name = name
+        return f
+
+    def _register(self, func, subst=None, widgetcmd=1):
+        """Prepares func to be associated by a Tcl command, the "prepared"
+        function is returned and will be registered when calling into Tcl.
+
+        Any time the associated command in Tcl is invoked, the Python func
+        will be called. If subst is given, it should be a function to be
+        executed before func."""
+        f = self._pre_register(self, func, subst)
+        f.widgetcmd = widgetcmd
+        return f
+
+    register = _register
+
+    def _finish_register(self, name, f, widgetcmd):
+        """Internal function.
+
+        Associates name to f in Tcl."""
         self.tk.createcommand(name, f)
 
         if widgetcmd: # this command pertains to a single widget
@@ -1311,10 +1331,6 @@ class Misc(object):
             if root._tclCommands is None:
                 root._tclCommands = []
             root._tclCommands.append(name)
-
-        return name
-
-    register = _register
 
     def _root(self):
         """Internal function."""
@@ -1467,11 +1483,16 @@ class CallWrapper:
     """Internal class. Stores function to call when some user
     defined Tcl function is called e.g. after an event occurred."""
 
-    def __init__(self, func, subst, widget):
+    def __init__(self, caller, func, subst, widget):
         """Store FUNC, SUBST and WIDGET as members."""
+        self.caller = caller
         self.func = func
         self.subst = subst
         self.widget = widget
+        self.name = ''
+
+    def __str__(self):
+        return self.name
 
     def __call__(self, *args):
         """Apply first function SUBST to arguments, than FUNC."""
@@ -2025,9 +2046,38 @@ class Tk(Misc, Wm):
                 baseName = baseName + ext
         self.tk = plumage.Interp(use_tk=useTk, sync=sync, use=use or 0,
                 display=screenName, name=className)
+
+        self._tkcall = self.tk.call
+        self.tk.call = self.tclcall
+
         if useTk:
             self._loadtk()
         self.readprofile(baseName, className)
+
+    def tclcall(self, *args, **kw):
+        """Call into Tcl with args.
+
+        If the call fails, any created commands will be removed."""
+        # XXX compatibility
+        if len(args) == 1 and isinstance(args[0], tuple):
+            args = args[0]
+        cmds = []
+
+        for item in kw.get('cmdcreate', ()):
+            Misc._finish_register(item.caller, str(item), item, item.widgetcmd)
+            cmds.append(item)
+        for arg in args:
+            if isinstance(arg, CallWrapper):
+                Misc._finish_register(arg.caller, str(arg), arg, arg.widgetcmd)
+                cmds.append(arg)
+
+        try:
+            return self._tkcall(*args)
+        except TclError:
+            # remove commands registered for this call since it failed
+            for arg in cmds:
+                Misc.deletecommand(arg.caller, str(arg))
+            raise
 
     def loadtk(self):
         if not self.tk.tk_loaded:
@@ -2066,6 +2116,11 @@ class Tk(Misc, Wm):
             c.destroy()
         self.tk.call('destroy', self._w)
         Misc.destroy(self)
+
+        # destroy the plumage.Interp instance
+        self._tkcall = None
+        del self.tk
+
         global _default_root
         if _support_default_root and _default_root is self:
             _default_root = None
