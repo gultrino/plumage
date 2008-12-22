@@ -1,0 +1,4 @@
+These are special modules for using Tkinter, including the Tkinter module
+itself, with plumage.
+
+There are also several fixes, and tests, not found in the current Tkinter.
