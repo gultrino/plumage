@@ -291,8 +291,12 @@ TclPyBridge_eval(TclInterpObj *self, PyObject *args)
 		flags = TCL_EVAL_DIRECT;
 
 	Tcl_Preserve(self->interp);
-	if (Tcl_EvalEx(self->interp, evalstr, -1, flags) != TCL_OK)
-		PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	if (Tcl_EvalEx(self->interp, evalstr, -1, flags) != TCL_OK) {
+		/* the error could have been on Python side, checking for that for
+		 * not overriding it */
+		if (!PyErr_Occurred())
+			PyErr_SetString(TclError, Tcl_GetStringResult(self->interp));
+	}
 	else
 		result = TclObj_ToPy(self, Tcl_GetObjResult(self->interp));
 	Tcl_Release(self->interp);
@@ -421,7 +425,6 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 	const char *error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
 	PyGILState_STATE gstate = PyGILState_Ensure();
 
-	self->err_in_cb = 2;
 	if (PyErr_Occurred() != NULL) {
 		/* error already set by Python */
 		goto end;
@@ -436,6 +439,7 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 	}
 
 end:
+	self->err_in_cb = 2;
 	PyGILState_Release(gstate);
 	return TCL_OK;
 }
@@ -1048,6 +1052,7 @@ TclInterp_Init(TclInterpObj *self, PyObject *args, PyObject *kwargs)
 					bgerr_handler->ob_type->tp_name);
 			return -1;
 		}
+		Py_INCREF(bgerr_handler);
 		self->bgerr_handler = bgerr_handler;
 	}
 

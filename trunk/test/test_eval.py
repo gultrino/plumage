@@ -28,6 +28,12 @@ class EvalTest(unittest.TestCase):
 
         self.assertRaises(plumage.TclError, tcleval, 'package require DNE')
 
+        # test that eval doesn't override a Python exception with an empty
+        # Tcl error
+        def err():
+            theerrorishere
+        self.interp.createcommand('errorishere', err)
+        self.assertRaises(NameError, tcleval, 'errorishere')
 
     def test_evalfile(self):
         interp = self.interp
