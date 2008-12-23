@@ -1412,15 +1412,11 @@ class Misc(object):
         if isinstance(query_opt, dict): # XXX compatibility
             kw.update(query_opt)
         elif query_opt is not None:
-            kw[query_opt] = None
-        opts = self._options(kw)
+            # return the value of this single specified option
+            args += ('-' + query_opt, )
+            return self.tk.call(self._w, *(args))[1:]
 
-        res = self.tk.call(self._w, *(args + opts))
-
-        # XXX this won't work when using _options
-        if len(opts) % 2:
-            # option specified without a value, return its value
-            return res
+        res = self.tk.call(self._w, *(args + self._options(kw)))
 
         d = {}
         for t in res:
