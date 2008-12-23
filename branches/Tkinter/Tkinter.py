@@ -2018,6 +2018,10 @@ class Wm:
     withdraw = wm_withdraw
 
 
+def _bgerror(msg):
+    sys.stderr.write("Background error in Tcl\n")
+    sys.stderr.write(msg)
+
 class Tk(Misc, Wm):
     """Toplevel widget of Tk which represents mostly the main window
     of an appliation. It has an associated Tcl interpreter."""
@@ -2026,7 +2030,7 @@ class Tk(Misc, Wm):
 
     # XXX fix docstring
     def __init__(self, screenName=None, baseName=None, className='Tk',
-            useTk=1, sync=0, use=0):
+            useTk=1, sync=0, use=0, bgerror_handler=None):
         """Return a new Toplevel widget on the given screenName.
 
         A new Tcl interpreter will be created. baseName will be used for the
@@ -2043,7 +2047,8 @@ class Tk(Misc, Wm):
             baseName, ext = os.path.splitext(baseName)
             if ext not in ('.py', '.pyc', '.pyo'):
                 baseName = baseName + ext
-        self.tk = plumage.Interp(use_tk=useTk, sync=sync, use=use or 0,
+        self.tk = plumage.Interp(bgerror_handler=bgerror_handler or _bgerror,
+                use_tk=useTk, sync=sync, use=use or 0,
                 display=screenName, name=className)
 
         self._tkcall = self.tk.call
