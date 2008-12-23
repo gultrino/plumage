@@ -2531,13 +2531,12 @@ class Canvas(Widget):
         """Move an item TAGORID given in ARGS."""
         self.tk.call(self._w, 'move', *args)
 
-    # XXX
-    def postscript(self, cnf={}, **kw):
+    def postscript(self, **kw):
         """Print the contents of the canvas to a postscript
         file. Valid options: colormap, colormode, file, fontmap,
         height, pageanchor, pageheight, pagewidth, pagex, pagey,
         rotate, witdh, x, y."""
-        return self.tk.call(self._w, 'postscript', *self._options(cnf, kw))
+        return self.tk.call(self._w, 'postscript', *self._options(kw))
 
     def tag_raise(self, *args):
         """Raise an item TAGORID given in ARGS
