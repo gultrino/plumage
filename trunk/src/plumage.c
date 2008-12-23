@@ -416,14 +416,20 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 		CONST char *argv[])
 {
 	TclInterpObj *self = clientdata;
+	PyObject *temp;
+	PyGILState_STATE gstate;
+	int orig_err_in_cb;
+	const char *error_info;
 
 	if (self == NULL) {
 		printf("This instance is gone!");
 		return TCL_ERROR;
 	}
 
-	const char *error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
-	PyGILState_STATE gstate = PyGILState_Ensure();
+	error_info = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
+	gstate = PyGILState_Ensure();
+	orig_err_in_cb = self->err_in_cb;
+	self->err_in_cb = 2;
 
 	if (PyErr_Occurred() != NULL) {
 		/* error already set by Python */
@@ -432,14 +438,18 @@ TclPyBridge_bgerr(ClientData clientdata, Tcl_Interp *interp, int argc,
 
 	if (self->bgerr_handler != NULL) {
 		/* call bgerror handler with the received message */
-		PyObject_CallFunction(self->bgerr_handler, "s", error_info);
+		temp = PyObject_CallFunction(self->bgerr_handler, "s", error_info);
+		if (temp != NULL) {
+			/* custom handler didn't raise an exception, unset the bgerror
+			 * indicator */
+			self->err_in_cb = orig_err_in_cb;
+		}
 	} else {
 		/* generic handler */
 		PyErr_SetString(TclError, error_info);
 	}
 
 end:
-	self->err_in_cb = 2;
 	PyGILState_Release(gstate);
 	return TCL_OK;
 }
