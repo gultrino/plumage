@@ -1409,7 +1409,9 @@ class Misc(object):
 
     def _configure(self, query_opt, *args, **kw):
         """Internal function."""
-        if query_opt is not None:
+        if isinstance(query_opt, dict): # XXX compatibility
+            kw.update(query_opt)
+        elif query_opt is not None:
             kw[query_opt] = None
         opts = self._options(kw)
 
