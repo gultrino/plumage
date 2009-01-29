@@ -1,9 +1,8 @@
 import sys
 import unittest
-import threading
+import Tkinter
 
 import support
-import Tkinter
 
 class AfterCmdTest(unittest.TestCase):
 

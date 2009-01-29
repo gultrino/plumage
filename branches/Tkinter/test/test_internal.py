@@ -1,8 +1,7 @@
 import unittest
-import threading
+import Tkinter
 
 import support
-import Tkinter
 
 class InternalFuncsTest(unittest.TestCase):
 
