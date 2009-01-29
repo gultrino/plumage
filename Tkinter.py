@@ -3663,20 +3663,19 @@ class Text(Widget):
             def append_triple(key, value, index, result=result):
                 result.append((key, value, index))
             command = append_triple
-        try:
-            if not isinstance(command, str):
-                func_name = command = self._register(command)
-            args += ["-command", command]
-            for key in kw:
-                if kw[key]: args.append("-" + key)
-            args.append(index1)
-            if index2:
-                args.append(index2)
-            self.tk.call(self._w, "dump", *args)
-            return result
-        finally:
-            if func_name:
-                self.deletecommand(func_name)
+
+        # XXX do people really pass an already registered command ?
+        if not isinstance(command, str):
+            command = self._register(command)
+        args += ("-command", command)
+        for key in kw:
+            if kw[key]: args.append("-" + key)
+        args.append(index1)
+        if index2:
+            args.append(index2)
+        self.tk.call(self._w, "dump", *args)
+        self.deletecommand(str(command))
+        return result
 
     ## new in tk8.4
     def edit(self, *args):
