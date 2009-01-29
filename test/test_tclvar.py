@@ -1,8 +1,7 @@
 import unittest
-import threading
+import Tkinter
 
 import support
-import Tkinter
 
 class TclVariableTest(unittest.TestCase):
 
