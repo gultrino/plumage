@@ -55,7 +55,11 @@ __all__ = ['Tk', 'Tcl', 'Toplevel', 'Button', 'Canvas', 'Checkbutton',
         'Variable', 'StringVar', 'IntVar', 'DoubleVar', 'BooleanVar',
 
         # images
-        'image_names', 'image_types', 'Image', 'BitmapImage', 'PhotoImage']
+        'image_names', 'image_types', 'Image', 'BitmapImage', 'PhotoImage',
+
+        # functions
+        '_flatten',
+        ]
 
 # constants
 __all__.extend(Tkconstants.__all__)
